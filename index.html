@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compressão e Testbench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="assets/tema.css">
+<script src="assets/tema.js" defer></script>
+<style>
+.hero { padding: 88px 0 24px; max-width: 860px; }
+.hero-acoes { display: flex; gap: 10px; margin-top: 32px; flex-wrap: wrap; }
+
+
+/* laboratórios */
+.secao { padding-top: 72px; }
+.secao-cab { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; margin-bottom: 24px; }
+.secao-cab p { margin: 8px 0 0; color: var(--muted); }
+.filtros { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.busca { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r); padding: 0 12px; height: 38px; transition: border-color .2s, box-shadow .2s; }
+.busca:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.busca input { border: 0; background: none; outline: none; width: 200px; font-size: .9rem; }
+.busca svg { color: var(--faint); }
+.grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
+.lab { display: flex; flex-direction: column; padding: 24px; min-height: 300px; text-decoration: none; position: relative; overflow: hidden; transition: transform .35s var(--ease), box-shadow .35s var(--ease), border-color .2s; }
+a.lab:hover { transform: translateY(-4px); box-shadow: var(--shadow); border-color: var(--line-strong); }
+.lab::after { content: ""; position: absolute; inset: 0 0 auto 0; height: 3px; background: var(--accent); transform: scaleX(0); transform-origin: left; transition: transform .45s var(--ease); }
+a.lab:hover::after { transform: scaleX(1); }
+.lab-top { display: flex; justify-content: space-between; align-items: center; }
+.lab-tipo { font: 500 .72rem var(--font-mono); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.lab h3 { margin: 40px 0 10px; font: 600 1.45rem/1.15 var(--font-display); letter-spacing: -.005em; }
+.lab p { margin: 0; color: var(--muted); font-size: .93rem; }
+.lab-meta { margin-top: auto; padding-top: 22px; display: flex; justify-content: space-between; align-items: center; font: .78rem var(--font-mono); color: var(--muted); gap: 12px; }
+.lab-meta .ir { color: var(--fg); font-family: var(--font-sans); font-weight: 500; font-size: .88rem; display: inline-flex; gap: 6px; align-items: center; }
+.lab-meta .ir svg { transition: transform .3s var(--ease); }
+a.lab:hover .ir svg { transform: translateX(4px); }
+.lab.off { background: transparent; border-style: dashed; }
+.lab.off h3 { color: var(--muted); }
+.vazio { color: var(--muted); padding: 32px 0; }
+
+.mats { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+.mat { display: flex; gap: 14px; align-items: center; padding: 14px 16px; text-decoration: none; transition: border-color .2s, transform .25s var(--ease); }
+.mat:hover { border-color: var(--line-strong); transform: translateX(3px); }
+.mat .ext { font: 500 .66rem var(--font-mono); text-transform: uppercase; width: 42px; height: 42px; border-radius: 8px; background: var(--sunken); display: grid; place-items: center; color: var(--muted); flex: none; }
+.mat b { font-weight: 500; font-size: .92rem; display: block; }
+.mat span { font-size: .78rem; color: var(--muted); }
+
+@media (max-width: 960px) { .hero { padding-top: 48px; } .busca input { width: 140px; } }
+</style>
+</head>
+<body>
+<header class="appbar"><div class="appbar-in">
+  <a class="marca" href="index.html" aria-label="Início">
+    <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" style="fill:var(--accent)"/><g fill="#fff"><rect x="6.5" y="7" width="3.6" height="18" rx="1.3"/><rect x="12" y="10.5" width="3.6" height="14.5" rx="1.3"/><rect x="17.5" y="14" width="3.6" height="11" rx="1.3"/><rect x="23" y="17.5" width="3.6" height="7.5" rx="1.3"/></g></svg>
+    <span><b>Compressão &amp; Testbench</b><small>PDC · SLMs</small></span>
+  </a>
+  <nav class="appnav">
+    <a href="index.html" aria-current="page">Laboratórios</a>
+    <a href="testbench/index.html">Testbench</a>
+    <a href="apresentacoes/README.md">Apresentações</a> <a href="docs/mapa-do-time.md">Mapa do time</a>
+    <button class="tema-btn" data-tema-alternar aria-label="Alternar tema claro/escuro"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg></button>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <section class="hero">
+    <div data-revelar>
+      <p class="eyebrow">PDC · SLMs · setembro a dezembro de 2026</p>
+      <h1 class="display">Time de Compressão<br>e Testbench</h1>
+      <p class="lede">Esse modelo roda no nosso hardware? Com qual qualidade, a que velocidade, e outra pessoa consegue repetir a medição? Aqui ficam os laboratórios que a gente constrói para responder isso: páginas para mexer, ver e medir.</p>
+      <div class="hero-acoes">
+        <a class="btn primario" href="#laboratorios">Ver laboratórios</a>
+        <a class="btn" href="testbench/index.html">Abrir o testbench</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="secao" id="laboratorios">
+    <div class="secao-cab">
+      <div><p class="eyebrow">Laboratórios</p><h2 class="display">Entender mexendo</h2><p>Oficinas, keywords e ferramentas do time, num lugar só.</p></div>
+      <div class="filtros">
+        <div class="seg" id="filtro"></div>
+        <label class="busca"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Buscar" aria-label="Buscar laboratório"></label>
+      </div>
+    </div>
+    <div class="grade" id="grade"></div>
+    <p class="vazio" id="vazio" hidden>Nenhum laboratório com esse filtro.</p>
+  </section>
+
+  <section class="secao" data-revelar>
+    <div class="secao-cab"><div><p class="eyebrow">Material de apoio</p><h2 class="display" style="font-size:1.6rem">Slides, guias e notebooks</h2></div></div>
+    <div class="mats" id="mats"></div>
+  </section>
+</main>
+
+<footer class="rodape"><div class="wrap"><span>Time de Compressão e Testbench · PDC · SLMs</span><span>Para rodar tudo localmente, veja o README</span></div></footer>
+
+<script>
+/* ===================================================================
+   Para adicionar um laboratório, acrescente um objeto em LABS:
+     tipo:   "oficina" | "keyword" | "ferramenta"
+     status: "ok" (disponível) | "proto" (protótipo) | "breve" (em breve)
+     href:   caminho relativo a esta página (null enquanto não existe)
+     semana: semana do calendário do README em que foi apresentado (ou null)
+   =================================================================== */
+const LABS = [
+  { id: "docker", tipo: "oficina", titulo: "Docker por dentro", semana: 2, quem: "Beatriz", status: "ok",
+    desc: "Clique em cada linha do Dockerfile e do compose e veja o que ela faz no seu computador. O mesmo modelo, medido em duas máquinas.",
+    href: "laboratorios/docker/docker-por-dentro.html" },
+  { id: "compressao", tipo: "keyword", titulo: "Compressão: as quatro famílias", semana: 5, quem: "Marcos", status: "ok",
+    desc: "Do zero: quanto pesa um modelo, o que quantização, pruning, destilação e KV cache fazem com os números, e uma receita para caber em 500 MB.",
+    href: "laboratorios/compressao/laboratorio-compressao.html" },
+  { id: "transformer", tipo: "oficina", titulo: "Transformer por dentro", semana: 5, quem: "João", status: "breve",
+    desc: "Atenção, pesos e funções de ativação. Onde estão os parâmetros de um modelo de 1B, camada por camada.", href: null },
+  { id: "testbench", tipo: "ferramenta", titulo: "Testbench", semana: null, quem: "time", status: "proto",
+    desc: "A bancada de medição: pipelines configuráveis, execução com log ao vivo e comparação de resultados com a procedência lado a lado.",
+    href: "testbench/index.html" },
+];
+const TIPOS = { todos: "Todos", oficina: "Oficinas", keyword: "Keywords", ferramenta: "Ferramentas" };
+const STATUS = { ok: ["Disponível", "ok"], proto: ["Protótipo", "acc"], breve: ["Em breve", ""] };
+
+const MATERIAIS = [
+  ["Docker na Prática", "Oficina · semana 2 · Beatriz", "apresentacoes/semana-02_2026-09-25/principal_beatriz_docker-na-pratica/docker-na-pratica.pptx"],
+  ["Quantização: representação numérica", "Keyword · semana 2 · Beatriz", "apresentacoes/semana-02_2026-09-25/keyword_beatriz_quantizacao-1-representacao-numerica/quantizacao-representacao-numerica.pdf"],
+  ["Guia de estudo: quantização", "Keyword · semana 2 · Beatriz", "apresentacoes/semana-02_2026-09-25/keyword_beatriz_quantizacao-1-representacao-numerica/guia-de-estudo.md"],
+  ["O que é um kernel", "Keyword · semana 3 · João", "apresentacoes/semana-03_2026-10-02/keyword_joao_kernels-1-o-que-e-um-kernel/kernel_hpc_01_o_que_e_um_kernel.ipynb"],
+  ["Kernels: slides", "Keyword · semana 3 · João", "apresentacoes/semana-03_2026-10-02/keyword_joao_kernels-1-o-que-e-um-kernel/kernels-o-que-e-um-kernel.pdf"],
+  ["Rodar um SLM local", "Atividade · semana 1 · Beatriz", "apresentacoes/semana-01_2026-09-18/atividade_beatriz_rodar-modelo-local/README.md"],
+  ["SLMs: guia didático", "Abertura · Beatriz", "apresentacoes/semana-00_2026-09-11/material_beatriz_guia-didatico-slms/guia-didatico-slms.pdf"],
+  ["Infraestrutura de inferência", "Keyword · semana 1 · Marcos", "apresentacoes/semana-01_2026-09-18/keyword_marcos_infraestrutura-de-inferencia-1/infraestrutura-de-inferencia-1.pdf"],
+];
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const seta = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+
+let tipo = "todos";
+function renderFiltro() {
+  $("filtro").innerHTML = Object.entries(TIPOS).map(([k, v]) => `<button data-t="${k}" aria-pressed="${k === tipo}">${v}</button>`).join("");
+}
+function renderGrade() {
+  const q = $("q").value.trim().toLowerCase();
+  const lista = LABS.filter(l => (tipo === "todos" || l.tipo === tipo) && (!q || [l.titulo, l.desc, l.quem].join(" ").toLowerCase().includes(q)));
+  $("vazio").hidden = lista.length > 0;
+  $("grade").innerHTML = lista.map((l, i) => {
+    const [st, cl] = STATUS[l.status];
+    const meta = [l.semana ? `semana ${l.semana}` : null, l.quem].filter(Boolean).join(" · ");
+    const corpo = `<div class="lab-top"><span class="lab-tipo">${{ oficina: "Oficina", keyword: "Keyword", ferramenta: "Ferramenta" }[l.tipo]}</span><span class="chip ${cl}">${st}</span></div>
+      <h3>${esc(l.titulo)}</h3><p>${esc(l.desc)}</p>
+      <div class="lab-meta"><span>${esc(meta)}</span>${l.href ? `<span class="ir">Abrir ${seta}</span>` : ""}</div>`;
+    return l.href ? `<a class="card lab" href="${encodeURI(l.href)}" data-revelar style="transition-delay:${i * 60}ms">${corpo}</a>`
+                  : `<div class="card lab off" data-revelar style="transition-delay:${i * 60}ms">${corpo}</div>`;
+  }).join("");
+  if (window.Tema) Tema.revelar();
+}
+$("filtro").addEventListener("click", e => { const b = e.target.closest("[data-t]"); if (!b) return; tipo = b.dataset.t; renderFiltro(); renderGrade(); });
+$("q").addEventListener("input", renderGrade);
+
+function renderMats() {
+  $("mats").innerHTML = MATERIAIS.map(([t, d, h]) => `<a class="card mat" href="${encodeURI(h)}"><span class="ext">${h.split(".").pop()}</span><div><b>${esc(t)}</b><span>${esc(d)}</span></div></a>`).join("");
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  renderFiltro(); renderGrade(); renderMats();
+  document.documentElement.dataset.pronto = "1";
+});
+</script>
+</body>
+</html>

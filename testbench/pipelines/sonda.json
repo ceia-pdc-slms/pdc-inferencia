@@ -1,0 +1,18 @@
+{
+  "id": "sonda",
+  "nome": "Sonda do servidor",
+  "categoria": "Diagnóstico",
+  "descricao": "Antes de medir: confere se o servidor responde, qual modelo está carregado, se o streaming funciona e quanto demora um pedido curto. Rápido (segundos).",
+  "esquema_resultado": "sonda-v1",
+  "comando": ["{python}", "-u", "{raiz}/testbench/pipelines/sonda.py"],
+  "saida": { "argumento": "--out" },
+  "progresso": "checagem (\\d+)/(\\d+)",
+  "parametros": [
+    { "id": "url", "rotulo": "Servidor do modelo", "grupo": "Ambiente", "tipo": "texto", "obrigatorio": true,
+      "padrao": "{modelo_url}", "argumento": "--url" },
+    { "id": "maquina", "rotulo": "Máquina", "grupo": "Ambiente", "tipo": "texto", "obrigatorio": true,
+      "padrao": "{maquina}", "argumento": "--maquina" },
+    { "id": "timeout", "rotulo": "Tempo limite (s)", "grupo": "Ambiente", "tipo": "real", "padrao": 30, "min": 1, "max": 600,
+      "argumento": "--timeout", "ajuda": "Por checagem." }
+  ]
+}

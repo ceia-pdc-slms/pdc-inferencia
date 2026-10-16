@@ -1,0 +1,48 @@
+# Oficina Docker + Testbench: um container serve o modelo, outro mede.
+#
+#   docker compose up -d modelo
+#   docker compose run --rm bench --machine <nome-da-maquina>
+#
+# Nome fixo do projeto: o mesmo usado pelo compose.yaml da raiz (laboratório completo),
+# para que os dois compartilhem o container do modelo e o volume com os pesos.
+name: pdc-slms
+
+services:
+  modelo:
+    # llama.cpp server: API compativel com OpenAI. Imagem multi-arquitetura (amd64 e arm64).
+    image: ghcr.io/ggml-org/llama.cpp:server
+    environment:
+      LLAMA_CACHE: /models
+    command:
+      - "-hf"
+      - "Qwen/Qwen2.5-0.5B-Instruct-GGUF:Q4_K_M"   # ~400 MB, baixado na primeira subida
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8080"
+      - "-c"
+      - "2048"
+    ports:
+      - "8080:8080"
+    volumes:
+      - modelos:/models
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 120          # o download do modelo pode demorar na primeira vez
+
+  bench:
+    build: .
+    profiles: ["bench"]     # so roda quando chamado com `docker compose run`
+    depends_on:
+      modelo:
+        condition: service_healthy
+    environment:
+      IMAGE_DIGEST: ${IMAGE_DIGEST:-}
+    entrypoint: ["python", "/app/bench.py", "--url", "http://modelo:8080", "--quant", "Q4_K_M", "--ctx", "2048"]
+    volumes:
+      - ./resultados:/resultados
+
+volumes:
+  modelos:

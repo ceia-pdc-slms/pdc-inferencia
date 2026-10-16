@@ -1,0 +1,42 @@
+# Pesos de modelo e artefatos grandes: nunca no repositório
+*.gguf
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.engine
+*.plan
+*.trt
+*.tflite
+models/
+checkpoints/
+hf_cache/
+.cache/
+
+# Segredos
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# Python e Node
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+node_modules/
+
+# Saídas locais de scripts (ex.: run_slm.py da semana 1)
+metricas.txt
+
+# Sistema e editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

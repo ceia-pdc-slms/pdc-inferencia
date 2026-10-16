@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Testbench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/tema.css">
+<script src="../assets/tema.js" defer></script>
+<style>
+.topo { padding: 40px 0 8px; display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
+.topo h1 { font-size: clamp(2.2rem, 4vw, 3rem); }
+.topo p { margin: 10px 0 0; color: var(--muted); max-width: 64ch; }
+.status { display: flex; gap: 8px; flex-wrap: wrap; }
+.status .chip { font-size: .74rem; padding: 7px 11px; }
+
+.abas { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin: 28px 0 24px; overflow-x: auto; }
+.abas button { border: 0; background: none; padding: 11px 16px; cursor: pointer; color: var(--muted); font-weight: 500; position: relative; white-space: nowrap; transition: color .2s; }
+.abas button::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 2px; background: var(--accent); border-radius: 2px; transform: scaleX(0); transition: transform .3s var(--ease); }
+.abas button[aria-selected="true"] { color: var(--fg); }
+.abas button[aria-selected="true"]::after { transform: scaleX(1); }
+.abas .n { font: 500 .7rem var(--font-mono); background: var(--sunken); border-radius: 999px; padding: 2px 7px; margin-left: 6px; }
+
+.offline { padding: 24px 26px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; margin-bottom: 24px; border-left: 4px solid var(--warn); }
+.offline h2 { margin: 0 0 6px; font: 600 1.3rem var(--font-display); }
+.offline p { margin: 0 0 10px; color: var(--muted); }
+.offline ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 10px; color: var(--muted); font-size: .9rem; }
+
+.exec { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 24px; align-items: start; }
+.pipes { display: flex; flex-direction: column; gap: 6px; position: sticky; top: 84px; }
+.pipes h4 { font: 500 .7rem var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--faint); margin: 14px 0 4px 4px; }
+.pipes h4:first-child { margin-top: 0; }
+.pipe { text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: var(--r); padding: 12px 14px; cursor: pointer; display: flex; flex-direction: column; gap: 3px; transition: border-color .2s, box-shadow .2s, transform .2s var(--ease); }
+.pipe:hover { border-color: var(--line-strong); transform: translateX(2px); }
+.pipe[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.pipe b { font-weight: 600; font-size: .93rem; }
+.pipe span { font-size: .78rem; color: var(--muted); line-height: 1.4; }
+.pipe-novo { color: var(--muted); font-size: .82rem; text-align: center; padding: 10px; border-radius: var(--r); border: 1px dashed var(--line-strong); text-decoration: none; margin-top: 6px; }
+.pipe-novo:hover { color: var(--fg); border-color: var(--fg); }
+
+.form-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+.form-head h2 { margin: 0; font: 600 1.6rem var(--font-display); }
+.form-head p { margin: 4px 0 0; color: var(--muted); max-width: 70ch; font-size: .93rem; }
+.grupo { padding: 18px 20px 20px; margin-bottom: 12px; animation: sobe .4s var(--ease) both; }
+.grupo > h3 { margin: 0 0 14px; font: 500 .72rem var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.grupo-campos { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px 18px; }
+.grupo-campos .largo { grid-column: 1 / -1; }
+@keyframes sobe { from { opacity: 0; transform: translateY(8px); } }
+
+.acoes { position: sticky; bottom: 0; z-index: 5; margin-top: 16px; padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px); box-shadow: var(--shadow); }
+.acoes-linha { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.acoes pre.codigo { flex: 1; min-width: 0; white-space: pre-wrap; word-break: break-all; padding: 10px 14px; font-size: .76rem; }
+.erro-form { color: var(--bad); font-size: .86rem; }
+
+.console { margin-top: 20px; overflow: hidden; animation: sobe .4s var(--ease); }
+.console-head { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.console-head b { font-weight: 600; }
+.console-head .tempo { font: 500 .82rem var(--font-mono); color: var(--muted); margin-left: auto; font-variant-numeric: tabular-nums; }
+.progresso { height: 3px; background: var(--sunken); position: relative; overflow: hidden; }
+.progresso i { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--accent); transition: width .5s var(--ease), background-color .3s; }
+.progresso.indet i { width: 30% !important; animation: indet 1.3s var(--ease) infinite; }
+@keyframes indet { from { left: -30%; } to { left: 100%; } }
+.log { margin: 0; max-height: 300px; overflow: auto; padding: 14px 20px; font: .78rem/1.65 var(--font-mono); background: var(--code-bg); color: var(--code-fg); white-space: pre-wrap; word-break: break-word; }
+.log .l-cmd { color: var(--code-key); }
+.log .l-erro { color: #F59A8E; }
+.log .l-nova { animation: linha .4s var(--ease); }
+@keyframes linha { from { opacity: 0; transform: translateX(-4px); } }
+.res-corpo { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.tile { background: var(--sunken); border-radius: var(--r); padding: 14px 16px; }
+.tile small { font-size: .74rem; color: var(--muted); display: block; }
+.tile b { font: 500 1.4rem var(--font-mono); font-variant-numeric: tabular-nums; display: block; margin-top: 2px; }
+.tile span { font-size: .74rem; color: var(--muted); }
+.checks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.checks li { display: grid; grid-template-columns: 22px 140px 80px 1fr; gap: 10px; align-items: baseline; font-size: .88rem; }
+.checks .ms { font: .8rem var(--font-mono); color: var(--muted); text-align: right; }
+.checks .det { font: .78rem var(--font-mono); color: var(--muted); overflow-wrap: anywhere; }
+
+.res-layout { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 24px; align-items: start; }
+.lista { padding: 8px; display: flex; flex-direction: column; gap: 2px; max-height: 70vh; overflow: auto; }
+.item { display: grid; grid-template-columns: 18px 1fr; gap: 10px; padding: 10px; border-radius: var(--r-sm); cursor: pointer; align-items: start; transition: background-color .15s; }
+.item:hover { background: var(--sunken); }
+.item b { font-weight: 500; font-size: .88rem; display: block; }
+.item span { font: .72rem var(--font-mono); color: var(--muted); display: block; overflow-wrap: anywhere; }
+.drop { display: block; border: 1.5px dashed var(--line-strong); border-radius: var(--r); padding: 14px; text-align: center; color: var(--muted); font-size: .84rem; cursor: pointer; margin-top: 8px; transition: border-color .2s, background-color .2s; }
+.drop.sobre { border-color: var(--accent); background: var(--accent-soft); }
+.painel { padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; margin-bottom: 16px; min-width: 0; animation: sobe .4s var(--ease) both; }
+.painel h3 { margin: 0; font: 600 1.1rem var(--font-display); display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.painel p.ajuda { margin: 0; color: var(--muted); font-size: .86rem; }
+.vazio { padding: 48px 24px; text-align: center; color: var(--muted); }
+svg.dots text { fill: var(--muted); font: 11px var(--font-mono); }
+svg.dots .lbl { fill: var(--fg); font: 500 12px var(--font-sans); }
+svg.dots .grid { stroke: var(--line); }
+svg.dots .run { fill: var(--accent); stroke: var(--surface); stroke-width: 2; }
+svg.dots .media { stroke: var(--fg); stroke-width: 2.5; stroke-linecap: round; }
+svg.dots .dp { stroke: var(--accent); stroke-width: 12; opacity: .16; stroke-linecap: round; }
+.veredito { border-left: 3px solid var(--ok); padding: 12px 16px; background: var(--sunken); border-radius: 0 var(--r) var(--r) 0; font-size: .92rem; }
+.veredito.warn { border-left-color: var(--warn); }
+.igual { color: var(--ok); } .dif { color: var(--warn); font-weight: 500; } .na { color: var(--faint); }
+.tip { position: fixed; pointer-events: none; z-index: 40; background: var(--fg); color: var(--bg); font: .76rem var(--font-mono); padding: 6px 10px; border-radius: 6px; }
+.tabela td.mono { font-size: .8rem; }
+
+.mf { padding: 20px 22px; margin-bottom: 14px; }
+.mf h3 { margin: 0 0 4px; font: 600 1.15rem var(--font-display); }
+.mf p { margin: 0 0 14px; color: var(--muted); font-size: .9rem; }
+
+@media (max-width: 1000px) { .exec, .res-layout, .offline { grid-template-columns: 1fr; } .pipes { position: static; } .tiles { grid-template-columns: 1fr 1fr; } .checks li { grid-template-columns: 22px 1fr 70px; } .checks .det { grid-column: 2 / -1; } }
+</style>
+</head>
+<body>
+<header class="appbar"><div class="appbar-in">
+  <a class="marca" href="../index.html" aria-label="Início">
+    <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" style="fill:var(--accent)"/><g fill="#fff"><rect x="6.5" y="7" width="3.6" height="18" rx="1.3"/><rect x="12" y="10.5" width="3.6" height="14.5" rx="1.3"/><rect x="17.5" y="14" width="3.6" height="11" rx="1.3"/><rect x="23" y="17.5" width="3.6" height="7.5" rx="1.3"/></g></svg>
+    <span><b>Compressão &amp; Testbench</b><small>PDC · SLMs</small></span>
+  </a>
+  <nav class="appnav">
+    <a href="../index.html">Laboratórios</a>
+    <a href="index.html" aria-current="page">Testbench</a>
+    <button class="tema-btn" data-tema-alternar aria-label="Alternar tema claro/escuro"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg></button>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <div class="topo">
+    <div>
+      <p class="eyebrow">Ferramenta · bancada de medição</p>
+      <h1 class="display">Testbench</h1>
+      <p>Escolha um pipeline, ajuste os parâmetros e execute. Cada execução grava um JSON com o resultado e a procedência, que pode ser comparado com qualquer outra medição do time.</p>
+    </div>
+    <div class="status">
+      <span class="chip" id="stBancada"><span class="pulso"></span>Bancada: verificando…</span>
+      <span class="chip" id="stModelo"><span class="pulso"></span>Modelo: —</span>
+    </div>
+  </div>
+
+  <div class="card offline" id="offline" hidden>
+    <div>
+      <h2>A bancada não está rodando</h2>
+      <p>Para executar pipelines a interface precisa do servidor da bancada: é ele que mede, sem passar pelo navegador. Comparar resultados funciona mesmo assim: arraste os JSON na aba <b>Resultados</b>.</p>
+      <p class="mono" style="font-size:.8rem" id="offMotivo"></p>
+    </div>
+    <ol>
+      <li>Na raiz do repositório: <pre class="codigo" style="margin-top:6px">python testbench/servidor.py</pre></li>
+      <li>Ou tudo em container (bancada + modelo): <pre class="codigo" style="margin-top:6px">docker compose up -d</pre></li>
+      <li>Abra <span class="mono">http://localhost:8088/testbench/</span>. O passo a passo completo está no README.</li>
+    </ol>
+  </div>
+
+  <div class="abas" role="tablist" id="abas">
+    <button data-a="executar" aria-selected="true">Executar</button>
+    <button data-a="resultados" aria-selected="false">Resultados<span class="n" id="nRes">0</span></button>
+    <button data-a="historico" aria-selected="false">Execuções<span class="n" id="nHist">0</span></button>
+    <button data-a="pipelines" aria-selected="false">Pipelines</button>
+  </div>
+
+  <!-- EXECUTAR -->
+  <section id="a-executar">
+    <div class="exec">
+      <aside class="pipes" id="pipes"></aside>
+      <div>
+        <div class="form-head"><div><h2 id="pNome">—</h2><p id="pDesc"></p></div>
+          <button class="btn peq" id="restaurar">Restaurar padrões</button></div>
+        <form id="form" novalidate></form>
+        <div class="card acoes">
+          <div class="acoes-linha">
+            <pre class="codigo" id="previa">—</pre>
+            <div class="seg" id="shell"><button data-s="sh" aria-pressed="true">bash</button><button data-s="ps">PowerShell</button></div>
+            <button class="btn peq" id="copiar" type="button">Copiar</button>
+          </div>
+          <div class="acoes-linha">
+            <span class="erro-form" id="erroForm"></span>
+            <button class="btn primario" id="executar" type="button" style="margin-left:auto">Executar</button>
+          </div>
+        </div>
+        <div id="consoleBox"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULTADOS -->
+  <section id="a-resultados" hidden>
+    <div class="res-layout">
+      <div>
+        <div class="card lista" id="lista"></div>
+        <label class="drop" id="drop">Arraste outros <span class="mono">.json</span> aqui, ou clique.<input type="file" id="arquivo" accept=".json,application/json" multiple hidden></label>
+      </div>
+      <div id="comparacao"><div class="card vazio">Marque um ou mais resultados à esquerda para ver e comparar.</div></div>
+    </div>
+  </section>
+
+  <!-- EXECUÇÕES -->
+  <section id="a-historico" hidden><div class="card" style="overflow-x:auto"><table class="tabela" id="hist"></table></div></section>
+
+  <!-- PIPELINES -->
+  <section id="a-pipelines" hidden>
+    <div id="mfs"></div>
+    <div class="card mf">
+      <h3>Como adicionar um pipeline</h3>
+      <p>Um pipeline é um arquivo JSON em <span class="mono">testbench/pipelines/</span>: o comando a rodar e a lista de parâmetros. A bancada monta o formulário, valida os valores, roda o comando sem shell e guarda o JSON que ele gerar. Pode ser um script nosso, o <span class="mono">llama-bench</span>, o <span class="mono">lm-eval</span>, um <span class="mono">docker run</span>… Reinicie a bancada depois de criar o arquivo. Detalhes em <span class="mono">testbench/README.md</span>.</p>
+<pre class="codigo">{
+  "id": "perplexidade",
+  "nome": "Perplexidade",
+  "categoria": "Qualidade",
+  "descricao": "…",
+  "esquema_resultado": "ppl-v1",
+  "comando": ["{python}", "-u", "{raiz}/testbench/pipelines/perplexidade.py"],
+  "saida": { "argumento": "--out" },
+  "progresso": "lote (\\d+)/(\\d+)",
+  "parametros": [
+    { "id": "url", "rotulo": "Servidor", "grupo": "Ambiente", "tipo": "texto",
+      "padrao": "{modelo_url}", "argumento": "--url", "obrigatorio": true },
+    { "id": "lotes", "rotulo": "Lotes", "grupo": "Carga", "tipo": "inteiro",
+      "padrao": 20, "min": 1, "argumento": "--lotes" }
+  ]
+}</pre>
+    </div>
+  </section>
+</main>
+
+<footer class="rodape"><div class="wrap"><span>Time de Compressão e Testbench · PDC · SLMs</span><span id="versao"></span></div></footer>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+"use strict";
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmt = (n, d = 1) => n == null || isNaN(n) ? "—" : Number(n).toLocaleString("pt-BR", { maximumFractionDigits: d, minimumFractionDigits: d });
+const API = location.protocol.startsWith("http") ? "/api" : null;
+const guardar = (k, v) => { try { localStorage.setItem("tb-" + k, JSON.stringify(v)); } catch {} };
+const ler = (k, padrao) => { try { const v = localStorage.getItem("tb-" + k); return v ? JSON.parse(v) : padrao; } catch { return padrao; } };
+
+async function api(rota, opts = {}) {
+  if (!API) throw new Error("página aberta direto do disco");
+  const r = await fetch(API + rota, { method: opts.method || "GET", headers: { "Content-Type": "application/json" }, body: opts.body ? JSON.stringify(opts.body) : undefined });
+  const j = await r.json().catch(() => ({ erro: `HTTP ${r.status}` }));
+  if (!r.ok) { const e = new Error(j.erro || `HTTP ${r.status}`); e.status = r.status; throw e; }
+  return j;
+}
+
+/* ---------- abas ---------- */
+function abrirAba(a) {
+  [...$("abas").children].forEach(b => { b.setAttribute("aria-selected", b.dataset.a === a); $("a-" + b.dataset.a).hidden = b.dataset.a !== a; });
+  if (a === "resultados") carregarResultados();
+  if (a === "historico") carregarHistorico();
+  history.replaceState(null, "", "#" + a);
+}
+$("abas").addEventListener("click", e => { const b = e.target.closest("[data-a]"); if (b) abrirAba(b.dataset.a); });
+
+/* ---------- estado da bancada e do modelo ---------- */
+let estado = null, pipelines = [], atual = null, online = false;
+function chip(el, classe, texto) { el.className = "chip " + classe; el.innerHTML = `<span class="pulso"></span>${texto}`; }
+async function verificar() {
+  try {
+    estado = await api("/estado");
+    online = true; $("offline").hidden = true;
+    chip($("stBancada"), "ok", `Bancada conectada · v${esc(estado.versao)}`);
+    $("versao").textContent = `bancada ${estado.versao} · Python ${estado.python}`;
+  } catch (e) {
+    online = false; $("offline").hidden = false;
+    $("offMotivo").textContent = API ? `(${e.message})` : "(a página foi aberta direto do disco, sem servidor)";
+    chip($("stBancada"), "bad", "Bancada desligada");
+    chip($("stModelo"), "", "Modelo: —");
+  }
+  $("executar").disabled = !online;
+  if (online) sondarModelo();
+}
+async function sondarModelo() {
+  const url = (atual && valores().url) || estado?.modelo_url;
+  if (!url) return;
+  try {
+    const s = await api("/sonda?url=" + encodeURIComponent(url));
+    if (s.ok) chip($("stModelo"), "ok", `Modelo online · ${esc(s.modelos[0] || "?")} · ${fmt(s.ms, 0)} ms`);
+    else chip($("stModelo"), "bad", `Modelo fora do ar em ${esc(url)}`);
+    $("stModelo").title = s.ok ? "" : s.erro;
+  } catch {}
+}
+setInterval(() => { if (online) sondarModelo(); else if (API) verificar(); }, 6000);
+
+/* ---------- pipelines e formulário ---------- */
+async function carregarPipelines() {
+  try { pipelines = await api("/pipelines"); } catch { pipelines = []; }
+  const cats = {};
+  pipelines.forEach(p => (cats[p.categoria || "Outros"] ||= []).push(p));
+  $("pipes").innerHTML = Object.entries(cats).map(([c, ps]) => `<h4>${esc(c)}</h4>` +
+    ps.map(p => `<button class="pipe" data-p="${esc(p.id)}"><b>${esc(p.nome)}</b><span>${esc(p.descricao.split(". ")[0])}.</span></button>`).join("")).join("") +
+    (pipelines.length ? `<a class="pipe-novo" href="#pipelines" data-ir="pipelines">+ adicionar um pipeline</a>` : `<p class="muted" style="font-size:.86rem;margin:0">Sem pipelines: a bancada está desligada.</p>`);
+  renderManifestos();
+  if (pipelines.length) {
+    const salvo = ler("pipeline", null);
+    selecionar(pipelines.some(p => p.id === salvo) ? salvo : pipelines[0].id);
+  }
+}
+$("pipes").addEventListener("click", e => {
+  const b = e.target.closest("[data-p]"); if (b) selecionar(b.dataset.p);
+  const ir = e.target.closest("[data-ir]"); if (ir) { e.preventDefault(); abrirAba(ir.dataset.ir); }
+});
+
+function campo(p, v) {
+  const id = "f_" + p.id, ajuda = p.ajuda ? `<small>${esc(p.ajuda)}</small>` : "";
+  const extra = p.obrigatorio ? "<em>obrigatório</em>" : p.min != null && p.max != null ? `<em>${p.min}…${p.max}</em>` : p.min != null ? `<em>≥ ${p.min}</em>` : p.max != null ? `<em>≤ ${p.max}</em>` : "";
+  let ctl;
+  if (p.tipo === "texto_longo") ctl = `<textarea id="${id}" name="${p.id}">${esc(v ?? "")}</textarea>`;
+  else if (p.tipo === "escolha") ctl = `<select id="${id}" name="${p.id}">${p.opcoes.map(o => { const val = typeof o === "object" ? o.valor : o, rot = typeof o === "object" ? o.rotulo : o; return `<option value="${esc(val)}" ${String(val) === String(v) ? "selected" : ""}>${esc(rot)}</option>`; }).join("")}</select>`;
+  else if (p.tipo === "booleano") return `<label class="campo" style="flex-direction:row;align-items:center;gap:10px"><input type="checkbox" id="${id}" name="${p.id}" ${v ? "checked" : ""}><span>${esc(p.rotulo)}</span></label>`;
+  else {
+    const tipo = p.tipo === "inteiro" || p.tipo === "real" ? "number" : "text";
+    const passo = p.tipo === "real" ? ' step="any"' : p.tipo === "inteiro" ? ' step="1"' : "";
+    const dl = p.sugestoes ? ` list="dl_${p.id}"` : "";
+    ctl = `<input type="${tipo}" id="${id}" name="${p.id}" value="${esc(v ?? "")}"${passo}${p.min != null ? ` min="${p.min}"` : ""}${p.max != null ? ` max="${p.max}"` : ""}${dl} autocomplete="off">` +
+      (p.sugestoes ? `<datalist id="dl_${p.id}">${p.sugestoes.map(s => `<option value="${esc(s)}">`).join("")}</datalist>` : "");
+  }
+  return `<label class="campo ${p.tipo === "texto_longo" ? "largo" : ""}" data-campo="${p.id}"><span>${esc(p.rotulo)}${extra}</span>${ctl}${ajuda}</label>`;
+}
+function selecionar(id) {
+  atual = pipelines.find(p => p.id === id); if (!atual) return;
+  guardar("pipeline", id);
+  [...$("pipes").querySelectorAll(".pipe")].forEach(b => b.setAttribute("aria-pressed", b.dataset.p === id));
+  $("pNome").textContent = atual.nome; $("pDesc").textContent = atual.descricao;
+  const salvos = ler("valores-" + id, {});
+  const grupos = {};
+  atual.parametros.forEach(p => (grupos[p.grupo || "Parâmetros"] ||= []).push(p));
+  $("form").innerHTML = Object.entries(grupos).map(([g, ps], i) =>
+    `<div class="card grupo" style="animation-delay:${i * 60}ms"><h3>${esc(g)}</h3><div class="grupo-campos">${ps.map(p => campo(p, p.id in salvos ? salvos[p.id] : atual.padroes[p.id])).join("")}</div></div>`).join("");
+  previa(); sondarModelo();
+}
+function valores() {
+  const out = {};
+  if (!atual) return out;
+  atual.parametros.forEach(p => {
+    const el = $("f_" + p.id); if (!el) return;
+    out[p.id] = p.tipo === "booleano" ? el.checked : el.value;
+  });
+  return out;
+}
+let tPrevia;
+$("form").addEventListener("input", () => { clearTimeout(tPrevia); tPrevia = setTimeout(previa, 250); guardar("valores-" + atual.id, valores()); });
+$("form").addEventListener("submit", e => e.preventDefault());
+$("restaurar").addEventListener("click", () => { if (!atual) return; guardar("valores-" + atual.id, {}); selecionar(atual.id); });
+
+let shell = "sh", ultimaPrevia = null;
+$("shell").addEventListener("click", e => { const b = e.target.closest("[data-s]"); if (!b) return; shell = b.dataset.s; [...$("shell").children].forEach(x => x.setAttribute("aria-pressed", x === b)); mostrarPrevia(); });
+function mostrarPrevia() { $("previa").textContent = ultimaPrevia ? ultimaPrevia[shell] : "—"; }
+async function previa() {
+  if (!atual || !online) return;
+  document.querySelectorAll(".campo.invalido").forEach(c => c.classList.remove("invalido"));
+  try {
+    ultimaPrevia = await api("/comando", { method: "POST", body: { pipeline: atual.id, parametros: valores() } });
+    $("erroForm").textContent = ""; mostrarPrevia();
+    if (!rodando) $("executar").disabled = false;
+  } catch (e) {
+    $("erroForm").textContent = e.message; $("executar").disabled = true;
+    const p = atual.parametros.find(p => e.message.startsWith((p.rotulo || p.id) + ":"));
+    if (p) document.querySelector(`[data-campo="${p.id}"]`)?.classList.add("invalido");
+  }
+}
+$("copiar").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText($("previa").textContent); $("copiar").textContent = "Copiado"; } catch { $("copiar").textContent = "Selecione e copie"; }
+  setTimeout(() => $("copiar").textContent = "Copiar", 1600);
+});
+
+/* ---------- execução ---------- */
+let polling = null, rodando = false;
+$("executar").addEventListener("click", async () => {
+  if (!atual) return;
+  $("executar").disabled = true;
+  try {
+    const ex = await api("/execucoes", { method: "POST", body: { pipeline: atual.id, parametros: valores() } });
+    acompanhar(ex.id);
+  } catch (e) {
+    $("erroForm").textContent = e.status === 409 ? "Já há uma execução rodando. Espere terminar ou cancele." : e.message;
+    $("executar").disabled = false;
+  }
+});
+function acompanhar(id) {
+  clearInterval(polling); rodando = true;
+  let desde = 0, ex = null, ocupado = false;
+  $("consoleBox").innerHTML = `<div class="card console">
+      <div class="console-head"><span class="chip acc" id="cEstado"><span class="pulso"></span>rodando</span><b id="cNome"></b><span class="mono muted" style="font-size:.78rem">${esc(id)}</span>
+        <span class="tempo" id="cTempo">0,0 s</span><button class="btn peq perigo" id="cCancelar">Cancelar</button></div>
+      <div class="progresso indet" id="cProg"><i></i></div>
+      <pre class="log" id="cLog"></pre><div id="cRes"></div></div>`;
+  $("consoleBox").scrollIntoView({ behavior: Tema.reduzir ? "auto" : "smooth", block: "nearest" });
+  $("cCancelar").onclick = () => api(`/execucoes/${id}/cancelar`, { method: "POST" }).catch(() => {});
+  const passo = async () => {
+    if (ocupado) return; ocupado = true;
+    try { ex = await api(`/execucoes/${id}?desde=${desde}`); } catch { ocupado = false; return; }
+    $("cNome").textContent = pipelines.find(p => p.id === ex.pipeline)?.nome || ex.pipeline;
+    const log = $("cLog"), noFim = log.scrollTop + log.clientHeight >= log.scrollHeight - 8;
+    ex.log.forEach(l => {
+      const d = document.createElement("div");
+      d.className = "l-nova" + (l.startsWith("$ ") ? " l-cmd" : /erro|Traceback|FALHOU|Error|refused/i.test(l) ? " l-erro" : "");
+      d.textContent = l; log.append(d);
+    });
+    desde = ex.log_total;
+    if (noFim) log.scrollTop = log.scrollHeight;
+    $("cTempo").textContent = fmt((ex.fim || Date.now() / 1000) - ex.inicio, 1) + " s";
+    const prog = $("cProg");
+    if (ex.progresso) { prog.classList.remove("indet"); prog.firstChild.style.width = (ex.progresso[0] / ex.progresso[1] * 100) + "%"; }
+    if (ex.estado !== "rodando") {
+      clearInterval(polling); rodando = false;
+      prog.classList.remove("indet"); prog.firstChild.style.width = "100%";
+      prog.firstChild.style.background = ex.estado === "ok" ? "var(--ok)" : ex.estado === "cancelado" ? "var(--faint)" : "var(--bad)";
+      $("cEstado").className = "chip " + ({ ok: "ok", erro: "bad", cancelado: "" }[ex.estado]);
+      $("cEstado").innerHTML = `<span class="pulso"></span>${{ ok: "concluído", erro: "erro", cancelado: "cancelado" }[ex.estado]}`;
+      $("cCancelar").remove();
+      $("executar").disabled = false;
+      mostrarResultado(ex);
+      carregarHistorico(); carregarResultados(true);
+    }
+    ocupado = false;
+  };
+  passo(); polling = setInterval(passo, 450);
+}
+function mostrarResultado(ex) {
+  const r = ex.resultado, alvo = $("cRes");
+  if (ex.estado !== "ok" && !r) {
+    alvo.innerHTML = ex.estado === "cancelado" ? "" : `<div class="res-corpo"><div class="veredito warn"><b>Não terminou.</b> ${esc(ex.erro || "")}. ${dicaErro(ex.log)}</div></div>`; return;
+  }
+  if (!r) { alvo.innerHTML = ""; return; }
+  const abrir = ex.arquivo ? `<button class="btn peq" data-abrir="${esc(ex.arquivo)}">Abrir em Resultados</button>` : "";
+  alvo.innerHTML = `<div class="res-corpo">${visao(r)}<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="mono muted" style="font-size:.78rem">${esc(ex.arquivo || "")}</span><span style="margin-left:auto"></span>${abrir}</div></div>`;
+  alvo.querySelector("[data-abrir]")?.addEventListener("click", e => { selecionados.add(e.target.dataset.abrir); guardar("selecionados", [...selecionados]); abrirAba("resultados"); });
+}
+function dicaErro(log) {
+  const t = log.join("\n");
+  if (/refused|recusou|10061|Errno 111|actively refused/i.test(t)) return "O servidor do modelo não respondeu. Ele está no ar? Na pasta docker/: <span class=\"mono\">docker compose up -d modelo</span>.";
+  if (/timed out|timeout/i.test(t)) return "O servidor demorou demais para responder.";
+  return "Veja o log acima.";
+}
+function visao(r) {
+  const esquema = r.esquema || (r.resumo ? "bench-v1" : "?");
+  if (esquema === "bench-v1") {
+    const s = r.resumo || {};
+    return `<div class="tiles">
+      <div class="tile"><small>Decode</small><b>${fmt(s.tok_per_s_decode?.mean)}</b><span>tok/s · ± ${fmt(s.tok_per_s_decode?.stdev, 2)}</span></div>
+      <div class="tile"><small>TTFT p50</small><b>${fmt((s.ttft_s?.p50 ?? NaN) * 1000, 0)}</b><span>ms até o primeiro token</span></div>
+      <div class="tile"><small>TPOT p50</small><b>${fmt((s.tpot_s?.p50 ?? NaN) * 1000, 1)}</b><span>ms por token</span></div>
+      <div class="tile"><small>ITL p95</small><b>${fmt((s.itl_s_agregado?.p95 ?? NaN) * 1000, 1)}</b><span>ms entre tokens</span></div></div>
+      ${grafico([{ nome: r.procedencia?.maquina || "resultado", v: (r.execucoes || []).map(e => e.tok_per_s_decode) }])}`;
+  }
+  if (esquema === "sonda-v1") {
+    return `<div class="veredito ${r.ok ? "" : "warn"}"><b>${r.ok ? "Servidor pronto para medir." : "O servidor tem problemas."}</b> ${esc(r.procedencia?.servidor_url)} · modelo ${esc(r.procedencia?.modelo || "?")}</div>
+      <ul class="checks">${(r.checagens || []).map(c => `<li><span class="${c.ok ? "igual" : "dif"}">${c.ok ? "✓" : "✗"}</span><b>${esc(c.nome)}</b><span class="ms">${fmt(c.ms, 0)} ms</span><span class="det">${esc(typeof c.detalhe === "string" ? c.detalhe : JSON.stringify(c.detalhe))}</span></li>`).join("")}</ul>`;
+  }
+  return `<pre class="codigo" style="max-height:320px">${esc(JSON.stringify(r, null, 2))}</pre>`;
+}
+
+/* ---------- gráfico de pontos: uma linha por resultado ---------- */
+function grafico(linhas) {
+  linhas = linhas.map(l => ({ ...l, v: l.v.filter(x => x != null) })).filter(l => l.v.length);
+  const todos = linhas.flatMap(l => l.v);
+  if (!todos.length) return "";
+  const W = 680, L = 170, R = 24, alt = 44, T = 8, H = T + linhas.length * alt + 34;
+  const topo = Math.max(...todos) * 1.08, passo = [1, 2, 5, 10, 20, 25, 50, 100, 200, 500].find(p => topo / p <= 7) || 1000;
+  const max = Math.ceil(topo / passo) * passo, x = v => L + v / max * (W - L - R);
+  const media = v => v.reduce((a, b) => a + b, 0) / v.length;
+  const dp = v => v.length > 1 ? Math.sqrt(v.reduce((s, y) => s + (y - media(v)) ** 2, 0) / (v.length - 1)) : 0;
+  let g = "";
+  for (let t = 0; t <= max; t += passo) g += `<line class="grid" x1="${x(t)}" x2="${x(t)}" y1="${T}" y2="${H - 26}"/><text x="${x(t)}" y="${H - 8}" text-anchor="middle">${fmt(t, 0)}</text>`;
+  linhas.forEach((l, i) => {
+    const y = T + i * alt + alt / 2, m = media(l.v), d = dp(l.v);
+    g += `<text class="lbl" x="${L - 14}" y="${y + 4}" text-anchor="end">${esc(l.nome.length > 22 ? l.nome.slice(0, 21) + "…" : l.nome)}</text>`;
+    g += `<line class="dp" x1="${x(Math.max(0, m - d))}" x2="${x(m + d)}" y1="${y}" y2="${y}"/>`;
+    g += l.v.map((v, k) => `<circle class="run" cx="${x(v)}" cy="${y}" r="5.5" data-tip="${esc(l.nome)} · execução ${k + 1}: ${fmt(v, 2)} tok/s"/>`).join("");
+    g += `<line class="media" x1="${x(m)}" x2="${x(m)}" y1="${y - 13}" y2="${y + 13}" data-tip="${esc(l.nome)} · média ${fmt(m, 2)} ± ${fmt(d, 2)} tok/s (n=${l.v.length})"/>`;
+  });
+  g += `<text x="${L - 14}" y="${H - 8}" text-anchor="end">tok/s →</text>`;
+  return `<svg class="dots" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="tok/s de decode por execução">${g}</svg>`;
+}
+const tip = $("tip");
+document.addEventListener("mousemove", e => {
+  const t = e.target.closest && e.target.closest("svg.dots [data-tip]");
+  if (!t) { tip.hidden = true; return; }
+  tip.textContent = t.dataset.tip; tip.hidden = false;
+  tip.style.left = Math.min(e.clientX + 12, innerWidth - tip.offsetWidth - 8) + "px"; tip.style.top = (e.clientY - 36) + "px";
+});
+
+/* ---------- resultados ---------- */
+let itens = [];
+const selecionados = new Set(ler("selecionados", []));
+async function carregarResultados(silencioso) {
+  let doServidor = [];
+  try { doServidor = await api("/resultados"); } catch {}
+  itens = [...doServidor, ...itens.filter(i => i.local)];
+  $("nRes").textContent = itens.length;
+  if (silencioso && $("a-resultados").hidden) return;
+  renderLista(); renderComparacao();
+}
+function renderLista() {
+  if (!itens.length) { $("lista").innerHTML = `<p class="muted" style="padding:12px;margin:0;font-size:.88rem">Nenhum resultado ainda. Rode um pipeline ou arraste arquivos.</p>`; return; }
+  $("lista").innerHTML = itens.map(i => `<label class="item"><input type="checkbox" data-c="${esc(i.caminho)}" ${selecionados.has(i.caminho) ? "checked" : ""}>
+      <div><b>${esc(i.maquina || "?")} <span class="chip" style="margin-left:4px">${esc(i.esquema)}</span></b>
+      <span>${esc((i.data_utc || "").replace("T", " ").replace("Z", " UTC"))}${i.legado ? " · oficina" : ""}${i.local ? " · arquivo local" : ""}</span>
+      <span>${esc(i.modelo || "")}</span></div></label>`).join("");
+}
+$("lista").addEventListener("change", e => {
+  const c = e.target.dataset.c; if (!c) return;
+  e.target.checked ? selecionados.add(c) : selecionados.delete(c);
+  guardar("selecionados", [...selecionados]); renderComparacao();
+});
+async function lerJSON(item) {
+  if (!item.json) item.json = await (await fetch("../" + item.caminho)).json();
+  return item.json;
+}
+async function renderComparacao() {
+  const sel = itens.filter(i => selecionados.has(i.caminho));
+  const alvo = $("comparacao");
+  if (!sel.length) { alvo.innerHTML = `<div class="card vazio">Marque um ou mais resultados à esquerda para ver e comparar.</div>`; return; }
+  const dados = await Promise.all(sel.map(async i => ({ nome: nomeCurto(i), j: await lerJSON(i).catch(() => null) })));
+  const bench = dados.filter(d => d.j && (d.j.resumo || d.j.esquema === "bench-v1"));
+  const outros = dados.filter(d => d.j && !bench.includes(d));
+  let html = "";
+  if (bench.length) {
+    html += `<div class="card painel"><h3>Decode por execução <span class="muted" style="font:400 .84rem var(--font-sans)">cada ponto é uma execução · traço = média · faixa = ± 1 desvio</span></h3>${grafico(bench.map(d => ({ nome: d.nome, v: (d.j.execucoes || []).map(e => e.tok_per_s_decode) })))}</div>`;
+    if (bench.length >= 2) html += `<div class="card painel"><h3>Dá para afirmar que um é melhor?
+        <span style="display:flex;gap:8px;align-items:center;font:400 .88rem var(--font-sans)"><select class="entrada" id="selA" style="width:auto"></select>vs<select class="entrada" id="selB" style="width:auto"></select></span></h3>
+        <div id="veredito"></div><p class="ajuda">Teste t de Welch sobre o tok/s de decode de cada execução, 95%. Com poucas execuções e desvio alto, diferenças pequenas não são diferença (Testbench 1/2).</p></div>`;
+    html += `<div class="card painel"><h3>Resumo</h3><div style="overflow-x:auto"><table class="tabela">${tabelaResumo(bench)}</table></div></div>`;
+    html += `<div class="card painel"><h3>Procedência</h3><p class="ajuda">Se imagem, script e carga são iguais, a diferença de velocidade é da máquina, não do ambiente.</p><div style="overflow-x:auto"><table class="tabela">${tabelaProcedencia(bench)}</table></div></div>`;
+  }
+  outros.forEach(d => html += `<div class="card painel"><h3>${esc(d.nome)}</h3>${visao(d.j)}</div>`);
+  alvo.innerHTML = html;
+  if (bench.length >= 2) {
+    const ops = bench.map((d, i) => `<option value="${i}">${esc(d.nome)}</option>`).join("");
+    $("selA").innerHTML = ops; $("selB").innerHTML = ops; $("selB").value = "1";
+    const v = () => $("veredito").innerHTML = welch(bench[+$("selA").value], bench[+$("selB").value]);
+    $("selA").onchange = v; $("selB").onchange = v; v();
+  }
+}
+function nomeCurto(i) { return `${i.maquina || "?"} · ${(i.data_utc || "").slice(5, 16).replace("T", " ")}`; }
+function tabelaResumo(bench) {
+  const s = (d, k, f, mul = 1, c = 1) => { const v = d.j.resumo?.[k]?.[f]; return v == null ? "—" : fmt(v * mul, c); };
+  return `<thead><tr><th>Resultado</th><th>Modelo</th><th class="r">Decode tok/s</th><th class="r">± dp</th><th class="r">TTFT p50 ms</th><th class="r">TPOT p50 ms</th><th class="r">ITL p95 ms</th><th class="r">n</th></tr></thead><tbody>` +
+    bench.map(d => `<tr><td>${esc(d.nome)}<div class="muted" style="font-size:.76rem">${esc(d.j.procedencia?.cpu || "")}</div></td><td>${esc(d.j.procedencia?.modelo || "")}</td>
+      <td class="r">${s(d, "tok_per_s_decode", "mean")}</td><td class="r">${s(d, "tok_per_s_decode", "stdev", 1, 2)}</td><td class="r">${s(d, "ttft_s", "p50", 1000, 0)}</td>
+      <td class="r">${s(d, "tpot_s", "p50", 1000)}</td><td class="r">${s(d, "itl_s_agregado", "p95", 1000)}</td><td class="r">${(d.j.execucoes || []).length}</td></tr>`).join("") + "</tbody>";
+}
+const PROV = [
+  ["Imagem Docker", "procedencia.imagem_docker_digest", true], ["Script (sha256)", "procedencia.script_sha256", true],
+  ["Modelo", "procedencia.modelo", true], ["Quantização", "procedencia.formato_quantizacao", true], ["Contexto", "procedencia.tamanho_contexto", true],
+  ["Prompt (sha256)", "procedencia.como_mediu.prompt_sha256", true], ["Max tokens", "procedencia.como_mediu.max_tokens", true],
+  ["Temperatura", "procedencia.como_mediu.temperature", true], ["Seed", "procedencia.como_mediu.seed", true],
+  ["Arquitetura", "procedencia.arquitetura", false], ["CPU", "procedencia.cpu", false], ["RAM (GB)", "procedencia.ram_gb", false],
+  ["Data (UTC)", "procedencia.data_utc", false], ["Notas", "procedencia.notas", false],
+];
+const pegar = (o, c) => c.split(".").reduce((x, k) => x?.[k], o);
+const curto = v => typeof v === "string" ? v.replace(/([0-9a-f]{10})[0-9a-f]{30,}/, "$1…") : v;
+function tabelaProcedencia(bench) {
+  return `<thead><tr><th>Campo</th>${bench.map(d => `<th>${esc(d.nome)}</th>`).join("")}<th>Situação</th></tr></thead><tbody>` +
+    PROV.map(([rot, c, igual]) => {
+      const vs = bench.map(d => pegar(d.j, c));
+      const iguais = vs.every(v => JSON.stringify(v) === JSON.stringify(vs[0])), falta = vs.some(v => v == null || v === "");
+      const sit = bench.length < 2 ? "" : !igual ? `<span class="na">pode variar</span>` : falta ? `<span class="dif">não registrado</span>` : iguais ? `<span class="igual">igual</span>` : `<span class="dif">diferente</span>`;
+      return `<tr><td>${rot}</td>${vs.map(v => `<td class="mono" title="${esc(v)}">${esc(curto(v ?? "—"))}</td>`).join("")}<td>${sit}</td></tr>`;
+    }).join("") + "</tbody>";
+}
+// t crítico bicaudal de 95% por graus de liberdade
+const TC = [12.71, 4.30, 3.18, 2.78, 2.57, 2.45, 2.36, 2.31, 2.26, 2.23, 2.20, 2.18, 2.16, 2.14, 2.13, 2.12, 2.11, 2.10, 2.09, 2.09, 2.08, 2.07, 2.07, 2.06, 2.06, 2.06, 2.05, 2.05, 2.05, 2.04];
+const tcrit = gl => gl >= 30 ? 1.96 + 0.08 * 30 / gl : TC[Math.max(1, Math.floor(gl)) - 1];
+function welch(A, B) {
+  if (A === B) return `<div class="veredito warn">Escolha dois resultados diferentes.</div>`;
+  const a = (A.j.execucoes || []).map(e => e.tok_per_s_decode).filter(x => x != null), b = (B.j.execucoes || []).map(e => e.tok_per_s_decode).filter(x => x != null);
+  if (a.length < 2 || b.length < 2) return `<div class="veredito warn">Precisa de pelo menos 2 execuções em cada um.</div>`;
+  const m = v => v.reduce((x, y) => x + y, 0) / v.length, va = v => v.reduce((s, y) => s + (y - m(v)) ** 2, 0) / (v.length - 1);
+  const sa = va(a) / a.length, sb = va(b) / b.length, se = Math.sqrt(sa + sb), dif = m(a) - m(b);
+  const t = se ? dif / se : Infinity, gl = se ? (sa + sb) ** 2 / (sa ** 2 / (a.length - 1) + sb ** 2 / (b.length - 1)) : 1;
+  const tc = tcrit(gl), sig = Math.abs(t) > tc, rapido = dif >= 0 ? A.nome : B.nome;
+  return `<div class="veredito ${sig ? "" : "warn"}"><b>${sig ? `Sim: ${esc(rapido)} é mais rápido.` : "Não dá para afirmar."}</b><br>
+    Diferença de ${fmt(Math.abs(dif), 1)} tok/s (${fmt(Math.abs(dif) / Math.min(m(a), m(b)) * 100, 0)}%). Com essa variância e esse número de execuções, só diferenças acima de <b>${fmt(tc * se, 1)} tok/s</b> são distinguíveis (t = ${fmt(t, 2)}, gl ≈ ${fmt(gl, 1)}).</div>`;
+}
+const drop = $("drop");
+drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("sobre"); });
+drop.addEventListener("dragleave", () => drop.classList.remove("sobre"));
+drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("sobre"); carregarArquivos(e.dataTransfer.files); });
+$("arquivo").addEventListener("change", e => { carregarArquivos(e.target.files); e.target.value = ""; });
+async function carregarArquivos(fs) {
+  for (const f of fs) {
+    try {
+      const j = JSON.parse(await f.text()), caminho = "local:" + f.name;
+      itens = itens.filter(i => i.caminho !== caminho);
+      itens.push({ caminho, local: true, json: j, maquina: j.procedencia?.maquina, modelo: j.procedencia?.modelo, data_utc: j.procedencia?.data_utc, esquema: j.esquema || (j.resumo ? "bench-v1" : "?") });
+      selecionados.add(caminho);
+    } catch { alert(f.name + ": não é um JSON válido"); }
+  }
+  $("nRes").textContent = itens.length; renderLista(); renderComparacao();
+}
+
+/* ---------- execuções e manifestos ---------- */
+async function carregarHistorico() {
+  let lista = [];
+  try { lista = await api("/execucoes"); } catch {}
+  $("nHist").textContent = lista.length;
+  const est = { ok: "ok", erro: "bad", cancelado: "", rodando: "acc" };
+  $("hist").innerHTML = `<thead><tr><th>Execução</th><th>Pipeline</th><th>Estado</th><th class="r">Duração</th><th>Comando</th></tr></thead><tbody>` +
+    (lista.length ? lista.map(e => `<tr><td class="mono" style="font-size:.78rem">${esc(e.id)}</td><td>${esc(e.pipeline)}</td><td><span class="chip ${est[e.estado]}">${esc(e.estado)}</span></td>
+      <td class="r">${e.fim ? fmt(e.fim - e.inicio, 1) + " s" : "—"}</td><td class="mono" style="font-size:.74rem;max-width:520px;white-space:normal;word-break:break-all">${esc(e.comando)}</td></tr>`).join("")
+      : `<tr><td colspan="5" class="muted">Nenhuma execução desde que a bancada foi iniciada.</td></tr>`) + "</tbody>";
+}
+function renderManifestos() {
+  $("mfs").innerHTML = pipelines.map(p => `<div class="card mf"><h3>${esc(p.nome)} <span class="chip" style="margin-left:6px">${esc(p.id)}</span> <span class="chip acc">${esc(p.esquema_resultado || "")}</span></h3><p>${esc(p.descricao)}</p>
+    <pre class="codigo" style="margin-bottom:12px">${esc(p.comando.join(" "))}</pre>
+    <div style="overflow-x:auto"><table class="tabela"><thead><tr><th>Parâmetro</th><th>Tipo</th><th>Argumento</th><th>Padrão</th><th>Limites</th></tr></thead><tbody>
+    ${p.parametros.map(q => `<tr><td>${esc(q.rotulo)}</td><td class="mono">${q.tipo}</td><td class="mono">${esc(q.argumento || "")}</td><td class="mono" style="max-width:280px;overflow-wrap:anywhere">${esc(p.padroes[q.id] ?? "")}</td><td class="mono">${q.min ?? ""}${q.min != null || q.max != null ? "…" : ""}${q.max ?? ""}</td></tr>`).join("")}
+    </tbody></table></div></div>`).join("");
+}
+
+(async () => {
+  await verificar();
+  await carregarPipelines();
+  await carregarResultados(true); carregarHistorico();
+  const aba = location.hash.slice(1);
+  if (["executar", "resultados", "historico", "pipelines"].includes(aba)) abrirAba(aba);
+  document.documentElement.dataset.pronto = "1";
+  /* ?autoteste: executa a sonda pela interface e espera o resultado (usado por tests/test_paginas.py) */
+  if (/[?&]autoteste/.test(location.search)) {
+    selecionar("sonda");
+    await new Promise(r => setTimeout(r, 300));
+    $("executar").click();
+    for (let i = 0; i < 2000; i++) {
+      // consultar a API segura o relógio virtual do navegador sem janela enquanto o processo real roda
+      await api("/estado").catch(() => {});
+      await new Promise(r => setTimeout(r, 50));
+      const est = $("cEstado")?.textContent || "";
+      if (/concluído|erro|cancelado/.test(est)) { document.documentElement.dataset.autoteste = /concluído/.test(est) && $("cRes").textContent.includes("Servidor pronto") ? "ok" : "falhou:" + est; break; }
+    }
+    abrirAba("resultados"); abrirAba("pipelines"); abrirAba("historico");
+  }
+})();
+});
+</script>
+</body>
+</html>

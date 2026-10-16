@@ -1,0 +1,903 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compressão: quatro famílias</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css">
+<link rel="stylesheet" href="../../assets/tema.css">
+<script src="../../assets/tema.js" defer></script>
+<script src="calculo.js" defer></script>
+<style>
+.layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 56px; }
+.indice { position: sticky; top: 84px; align-self: start; padding-top: 72px; display: flex; flex-direction: column; gap: 2px; font-size: .86rem; }
+.indice a { text-decoration: none; color: var(--faint); padding: 6px 0 6px 14px; border-left: 2px solid var(--line); transition: color .25s, border-color .25s; display: flex; gap: 10px; }
+.indice a span { font: 500 .72rem var(--font-mono); padding-top: 2px; }
+.indice a:hover { color: var(--fg); }
+.indice a.ativo { color: var(--fg); border-left-color: var(--fg); }
+.indice a[data-c].ativo { border-left-color: var(--c); }
+
+.hero { padding: 72px 0 24px; }
+.pergunta { margin-top: 32px; display: flex; gap: 16px; align-items: flex-start; padding: 18px 20px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); max-width: 720px; }
+.pergunta b { font: 500 .7rem var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); white-space: nowrap; padding-top: 4px; }
+.pergunta p { margin: 0; font-size: 1.08rem; font-weight: 500; }
+
+.cap { padding-top: 96px; scroll-margin-top: 60px; }
+.cap-head { display: flex; gap: 18px; align-items: baseline; margin-bottom: 8px; }
+.cap-num { font: 500 .8rem var(--font-mono); color: var(--c, var(--accent)); padding: 3px 8px; border-radius: 6px; background: color-mix(in srgb, var(--c, var(--accent)) 12%, transparent); flex: none; }
+.cap p.texto { max-width: 68ch; color: var(--muted); font-size: 1.02rem; margin: 14px 0 0; }
+.cap p.texto b { color: var(--fg); font-weight: 600; }
+.palco { margin-top: 32px; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(280px, .75fr); gap: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; }
+.palco-vis { padding: 28px; border-right: 1px solid var(--line); min-width: 0; display: flex; flex-direction: column; gap: 18px; }
+.palco-txt { padding: 28px; display: flex; flex-direction: column; gap: 16px; background: color-mix(in srgb, var(--sunken) 45%, var(--surface)); }
+.passo-n { font: 500 .72rem var(--font-mono); color: var(--c); letter-spacing: .04em; }
+.palco-txt h3 { font: 600 1.35rem/1.2 var(--font-display); margin: 0; letter-spacing: -.005em; }
+.palco-txt p { margin: 0; color: var(--muted); }
+.palco-txt p b { color: var(--fg); }
+.passo-anim { animation: entra .5s var(--ease); }
+@keyframes entra { from { opacity: 0; transform: translateY(6px); } }
+.nav-passos { margin-top: auto; display: flex; align-items: center; gap: 8px; padding-top: 8px; }
+.pontos { display: flex; gap: 6px; margin-right: auto; }
+.pontos button { width: 22px; height: 6px; border-radius: 3px; border: 0; background: var(--line-strong); cursor: pointer; padding: 0; transition: background-color .3s, width .3s var(--ease); }
+.pontos button[aria-current="true"] { background: var(--c); width: 34px; }
+.metricas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border-radius: var(--r); overflow: hidden; border: 1px solid var(--line); }
+.metricas div { background: var(--surface); padding: 10px 12px; }
+.metricas small { display: block; font-size: .72rem; color: var(--muted); }
+.metricas b { font: 500 1.05rem var(--font-mono); font-variant-numeric: tabular-nums; }
+.ctl { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: .85rem; color: var(--muted); }
+svg.vis { width: 100%; height: auto; display: block; overflow: visible; }
+svg.vis text { font-family: var(--font-mono); font-size: 11px; fill: var(--muted); }
+.t { transition: transform .7s var(--ease), opacity .5s var(--ease); }
+.sem-anim .t, .sem-anim.t { transition: none !important; }
+
+/* 01 · tamanho */
+.conta { margin-top: 32px; display: grid; grid-template-columns: 1fr auto 1fr auto 1.1fr; gap: 16px; align-items: stretch; }
+.conta .op { align-self: center; font: 500 1.6rem var(--font-mono); color: var(--faint); }
+.termo { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+.termo small { font: 500 .7rem var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.termo .grande { font: 600 2rem/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.termo.res { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.termo.res small { color: color-mix(in srgb, var(--bg) 70%, transparent); }
+.barra-orc { margin-top: 18px; position: relative; height: 34px; background: var(--sunken); border-radius: 8px; overflow: visible; }
+.barra-orc .enche { position: absolute; inset: 0 auto 0 0; background: var(--fg); border-radius: 8px; transition: width .9s var(--ease), background-color .4s; }
+.barra-orc .enche.passa { background: repeating-linear-gradient(-45deg, var(--bad) 0 6px, color-mix(in srgb, var(--bad) 75%, var(--surface)) 6px 12px); }
+.barra-orc .limite { position: absolute; top: -8px; bottom: -8px; border-left: 2px dashed var(--fg); transition: left .6s var(--ease); }
+.barra-orc .limite span { position: absolute; top: -20px; left: 0; transform: translateX(-50%); font: 500 .72rem var(--font-mono); white-space: nowrap; }
+.barra-leg { display: flex; justify-content: space-between; font: .74rem var(--font-mono); color: var(--faint); margin-top: 6px; }
+.arvore { margin-top: 40px; }
+.arvore-raiz { text-align: center; font: 600 1.15rem var(--font-display); padding: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); max-width: 560px; margin: 0 auto; }
+.arvore-raiz span { color: var(--muted); font-weight: 500; }
+.ramos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 44px; position: relative; }
+.ramos::before { content: ""; position: absolute; top: -24px; left: calc((100% - 42px) / 8); right: calc((100% - 42px) / 8); height: 24px; border: 2px solid var(--line-strong); border-bottom: 0; border-radius: 10px 10px 0 0; }
+.ramos::after { content: ""; position: absolute; top: -44px; left: 50%; height: 20px; border-left: 2px solid var(--line-strong); }
+.ramo { background: var(--surface); border: 1px solid var(--line); border-top: 4px solid var(--c); border-radius: var(--r); padding: 16px; display: flex; flex-direction: column; gap: 6px; text-decoration: none; transition: transform .3s var(--ease), box-shadow .3s; position: relative; }
+.ramo::before { content: ""; position: absolute; top: -26px; left: 50%; height: 22px; border-left: 2px solid var(--line-strong); }
+.ramo:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+.ramo small { font: 500 .7rem var(--font-mono); color: var(--c); letter-spacing: .04em; }
+.ramo b { font: 600 1.15rem var(--font-display); }
+.ramo span { font-size: .86rem; color: var(--muted); }
+
+/* 03 · pruning */
+.matriz { display: flex; flex-direction: column; gap: 4px; }
+.mlinha { display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px; height: 30px; transition: height .6s var(--ease), opacity .5s, margin .6s var(--ease); }
+.mlinha.fora { height: 0; opacity: 0; margin-top: -4px; }
+.mcel { border-radius: 4px; background: color-mix(in srgb, var(--fg) var(--m), var(--surface)); transition: background-color .5s var(--ease), box-shadow .5s, transform .5s var(--ease); }
+.mcel.zero { background: transparent; box-shadow: inset 0 0 0 1.5px var(--line-strong); transform: scale(.82); }
+.mlinha.alvo .mcel { box-shadow: inset 0 0 0 2px var(--c2); }
+.medidor { display: flex; flex-direction: column; gap: 6px; }
+.medidor-bar { height: 12px; background: var(--sunken); border-radius: 6px; overflow: hidden; }
+.medidor-bar i { display: block; height: 100%; background: var(--c); border-radius: 6px; transition: width .8s var(--ease); }
+.medidor-leg { display: flex; justify-content: space-between; font: .78rem var(--font-mono); color: var(--muted); }
+
+/* 04 · destilação */
+.redes { display: flex; align-items: center; justify-content: center; gap: 24px; }
+.redes svg circle { transition: fill .4s; }
+.dist { display: grid; grid-template-columns: 76px repeat(3, minmax(0, 1fr)); gap: 8px 12px; align-items: center; font-size: .84rem; }
+.dist .cab { font: 500 .68rem var(--font-mono); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.dist .tok { font-family: var(--font-mono); }
+.pbar { height: 20px; background: var(--sunken); border-radius: 5px; position: relative; overflow: hidden; }
+.pbar i { position: absolute; inset: 0 auto 0 0; border-radius: 5px; transition: width .5s var(--ease); }
+.pbar span { position: absolute; right: 6px; top: 1px; font: .7rem var(--font-mono); color: var(--muted); }
+.col-off { opacity: .25; transition: opacity .5s; }
+
+/* 05 · KV */
+.frase { font: 500 1.05rem var(--font-mono); min-height: 1.6em; display: flex; flex-wrap: wrap; gap: 6px; }
+.frase span { padding: 1px 6px; border-radius: 4px; background: var(--c4-soft); color: var(--fg); animation: entra .35s var(--ease); }
+.frase span.novo { background: var(--c4); color: #fff; }
+.kvgrade { display: grid; grid-template-columns: 74px 1fr; gap: 6px 10px; align-items: center; }
+.kvgrade > small { font: .74rem var(--font-mono); color: var(--muted); }
+.kvlinha { display: flex; gap: 3px; height: 30px; }
+.kvc { width: 18px; display: flex; flex-direction: column; gap: 2px; animation: cresce .35s var(--ease); transition: opacity .5s; }
+.kvc i { flex: 1; border-radius: 2px; background: var(--c4); transition: opacity .4s, background-color .4s; }
+.kvc i + i { opacity: .55; }
+.kvc.meio i { opacity: .45; } .kvc.meio i + i { opacity: .25; }
+.kvc.fora i { background: transparent; box-shadow: inset 0 0 0 1px var(--line-strong); opacity: 1; }
+@keyframes cresce { from { transform: scaleY(0); opacity: 0; } }
+.comp { display: flex; flex-direction: column; gap: 8px; }
+.comp-l { display: grid; grid-template-columns: 70px 1fr 84px; gap: 10px; align-items: center; font-size: .82rem; }
+.comp-l .pbar i { background: var(--c); }
+.comp-l b { font: 500 .82rem var(--font-mono); text-align: right; }
+
+/* 06 · tabela */
+.fam { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; white-space: nowrap; }
+.fam::before { content: ""; width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
+.sim { color: var(--ok); font-weight: 500; } .nao { color: var(--faint); } .talvez { color: var(--warn); font-weight: 500; }
+
+/* 07 · receita */
+.lab { margin-top: 32px; display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 20px; align-items: start; }
+.lab-in { display: flex; flex-direction: column; gap: 12px; }
+.lab-base { padding: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.lab-base .campo:first-child { grid-column: 1 / -1; }
+.ing { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; border-left: 4px solid var(--line-strong); transition: border-color .3s, background-color .3s; }
+.ing.on { border-left-color: var(--c); background: color-mix(in srgb, var(--c) 5%, var(--surface)); }
+.ing-top { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.ing-top b { font: 600 1rem var(--font-display); flex: 1; }
+.ing-top small { font: .74rem var(--font-mono); color: var(--muted); }
+.ing-corpo { display: none; }
+.ing.on .ing-corpo { display: flex; flex-direction: column; gap: 8px; animation: entra .35s var(--ease); }
+.sw { width: 36px; height: 20px; border-radius: 10px; background: var(--line-strong); position: relative; flex: none; transition: background-color .25s; border: 0; padding: 0; cursor: pointer; }
+.sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform .25s var(--ease); box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.ing.on .sw { background: var(--c); }
+.ing.on .sw::after { transform: translateX(16px); }
+.lab-out { padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+.veredito { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.veredito .grande { font: 600 2.8rem/1 var(--font-display); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+svg.cascata text { font-family: var(--font-mono); font-size: 11px; fill: var(--muted); }
+svg.cascata .val { fill: var(--fg); font-weight: 500; }
+svg.cascata rect.b { transition: y .7s var(--ease), height .7s var(--ease), x .5s var(--ease), width .5s var(--ease), fill .4s; }
+svg.cascata .grid { stroke: var(--line); }
+.composicao { display: flex; height: 10px; border-radius: 5px; overflow: hidden; gap: 2px; background: var(--sunken); }
+.composicao i { transition: width .7s var(--ease); }
+.leg { display: flex; gap: 16px; flex-wrap: wrap; font-size: .8rem; color: var(--muted); }
+.leg span { display: inline-flex; align-items: center; gap: 6px; }
+.leg span::before { content: ""; width: 10px; height: 10px; border-radius: 3px; background: var(--k); }
+.custos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: .88rem; }
+.custos li { display: flex; gap: 10px; align-items: flex-start; }
+.custos li::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: var(--c); margin-top: 7px; flex: none; }
+.fatos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.fato { background: var(--sunken); border-radius: var(--r); padding: 12px 14px; }
+.fato small { font-size: .74rem; color: var(--muted); display: block; }
+.fato b { font: 500 1.1rem var(--font-mono); display: block; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.fato span { font-size: .74rem; color: var(--muted); }
+.dica { font-size: .88rem; padding: 12px 14px; border-radius: var(--r); background: var(--accent-soft); }
+
+/* 08 · resposta */
+.ordem { margin-top: 32px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.ordem .card { padding: 22px; display: flex; flex-direction: column; gap: 10px; border-top: 4px solid var(--c); }
+.ordem small { font: 500 .72rem var(--font-mono); color: var(--c); }
+.ordem h3 { margin: 0; font: 600 1.2rem var(--font-display); }
+.ordem p { margin: 0; color: var(--muted); font-size: .93rem; }
+.resposta { margin-top: 20px; padding: 22px 26px; border-radius: var(--r-lg); background: var(--fg); color: var(--bg); font-size: 1.04rem; line-height: 1.6; }
+.resposta b { color: var(--bg); }
+.frentes { margin-top: 28px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.frente { padding: 18px; display: flex; flex-direction: column; gap: 6px; }
+.frente small { font: 500 .7rem var(--font-mono); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.frente b { font-weight: 600; }
+.frente p { margin: 0; color: var(--muted); font-size: .9rem; }
+
+.tip { position: fixed; pointer-events: none; z-index: 30; background: var(--fg); color: var(--bg); font: .76rem var(--font-mono); padding: 6px 10px; border-radius: 6px; max-width: 280px; }
+
+@media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } .indice { display: none; } }
+@media (max-width: 900px) {
+  .palco, .lab { grid-template-columns: 1fr; }
+  .palco-vis { border-right: 0; border-bottom: 1px solid var(--line); }
+  .conta { grid-template-columns: 1fr; } .conta .op { justify-self: center; }
+  .ramos, .ordem, .frentes { grid-template-columns: 1fr 1fr; } .ramos::before, .ramos::after, .ramo::before { display: none; }
+  .metricas { grid-template-columns: 1fr 1fr; } .fatos { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) { .ramos, .ordem, .frentes { grid-template-columns: 1fr; } .palco-vis, .palco-txt { padding: 18px; } }
+</style>
+</head>
+<body>
+<header class="appbar"><div class="appbar-in">
+  <a class="marca" href="../../index.html" aria-label="Início">
+    <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" style="fill:var(--accent)"/><g fill="#fff"><rect x="6.5" y="7" width="3.6" height="18" rx="1.3"/><rect x="12" y="10.5" width="3.6" height="14.5" rx="1.3"/><rect x="17.5" y="14" width="3.6" height="11" rx="1.3"/><rect x="23" y="17.5" width="3.6" height="7.5" rx="1.3"/></g></svg>
+    <span><b>Compressão &amp; Testbench</b><small>PDC · SLMs</small></span>
+  </a>
+  <nav class="appnav">
+    <a href="../../index.html" aria-current="page">Laboratórios</a>
+    <a href="../../testbench/index.html">Testbench</a>
+    <button class="tema-btn" data-tema-alternar aria-label="Alternar tema claro/escuro"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg></button>
+  </nav>
+</div></header>
+
+<div class="wrap layout">
+  <nav class="indice" id="indice" aria-label="Partes">
+    <a href="#tamanho"><span>01</span>O tamanho</a>
+    <a href="#quant" data-c style="--c:var(--c1)"><span>02</span>Quantização</a>
+    <a href="#poda" data-c style="--c:var(--c2)"><span>03</span>Pruning</a>
+    <a href="#dest" data-c style="--c:var(--c3)"><span>04</span>Destilação</a>
+    <a href="#kv" data-c style="--c:var(--c4)"><span>05</span>KV cache</a>
+    <a href="#lado"><span>06</span>Lado a lado</a>
+    <a href="#receita"><span>07</span>Sua receita</a>
+    <a href="#resposta"><span>08</span>A resposta</a>
+  </nav>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">Keyword · Compressão 1/2 · semana 5</p>
+      <h1 class="display">Como fazer um modelo caber</h1>
+      <p class="lede">Um modelo de linguagem é uma pilha de números. Comprimir é guardar menos números, ou guardar cada um com menos bits. Esta página mostra as quatro formas de fazer isso, uma de cada vez, e no fim você monta a sua própria receita.</p>
+      <div class="pergunta"><b>Pergunta da semana</b><p>Se eu preciso caber em 500 MB, qual família eu ataco primeiro e por quê?</p></div>
+    </section>
+
+    <!-- ===================== 01 ===================== -->
+    <section class="cap" id="tamanho" data-revelar>
+      <div class="cap-head"><span class="cap-num">01</span><h2 class="display">Quanto pesa um modelo</h2></div>
+      <p class="texto">Cada <b>peso</b> (ou parâmetro) é um número aprendido no treino. Na memória, cada um ocupa um certo número de bits. O tamanho do modelo é só uma multiplicação. Escolha um modelo e um formato.</p>
+      <div class="conta">
+        <div class="termo"><small>Quantos pesos</small><span class="grande" id="tPesos">494 M</span>
+          <select class="entrada" id="tModelo" aria-label="Modelo"></select></div>
+        <span class="op">×</span>
+        <div class="termo"><small>Bytes por peso</small><span class="grande" id="tBytes">2</span>
+          <div class="seg" id="tFmt" role="group" aria-label="Formato">
+            <button data-b="4">FP32</button><button data-b="2" aria-pressed="true">FP16</button><button data-b="1">INT8</button><button data-b="0.5">INT4</button>
+          </div></div>
+        <span class="op">=</span>
+        <div class="termo res"><small>Só os pesos</small><span class="grande" id="tTotal">988 MB</span><small id="tCabe"></small></div>
+      </div>
+      <div class="barra-orc" aria-hidden="true"><div class="enche" id="tBarra"></div><div class="limite" id="tLim"><span>500 MB</span></div></div>
+      <div class="barra-leg"><span>0</span><span id="tEsc">2 GB</span></div>
+
+      <p class="texto" style="margin-top:48px">Para diminuir essa conta só existem <b>dois botões</b>: guardar cada peso com <b>menos bits</b>, ou ter <b>menos pesos</b>. E quando o modelo está rodando aparece um terceiro gasto, o <b>KV cache</b>, a memória da conversa. As quatro famílias de compressão saem daí:</p>
+      <div class="arvore">
+        <div class="arvore-raiz">memória = <span>nº de pesos × bits por peso</span> + <span>KV cache</span></div>
+        <div class="ramos">
+          <a class="ramo" href="#quant" style="--c:var(--c1)"><small>menos bits por peso</small><b>Quantização</b><span>Os mesmos pesos, escritos com menos precisão.</span></a>
+          <a class="ramo" href="#poda" style="--c:var(--c2)"><small>menos pesos · mesmo modelo</small><b>Pruning</b><span>Tirar os pesos que menos fazem diferença.</span></a>
+          <a class="ramo" href="#dest" style="--c:var(--c3)"><small>menos pesos · modelo novo</small><b>Destilação</b><span>Treinar um modelo pequeno para imitar o grande.</span></a>
+          <a class="ramo" href="#kv" style="--c:var(--c4)"><small>cache menor</small><b>Compressão de KV</b><span>Guardar a memória da conversa com menos bytes.</span></a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== 02 ===================== -->
+    <section class="cap" id="quant" style="--c:var(--c1)" data-revelar>
+      <div class="cap-head"><span class="cap-num">02</span><h2 class="display">Quantização: menos bits por peso</h2></div>
+      <p class="texto">A ideia é a mesma de arredondar preços para os 10 centavos mais próximos: perde-se um pouco de precisão, mas cada número fica muito mais curto. Siga os passos.</p>
+      <div class="palco">
+        <div class="palco-vis">
+          <svg class="vis sem-anim" id="qSvg" viewBox="0 0 640 210" role="img" aria-label="Pesos numa régua de quantização"></svg>
+          <div id="qCodigos" style="min-height:52px"></div>
+          <div class="metricas">
+            <div><small>Bits por peso</small><b id="qmBits">16</b></div>
+            <div><small>Valores possíveis</small><b id="qmNiv">65 536</b></div>
+            <div><small>Erro médio</small><b id="qmErr">0</b></div>
+            <div><small>Qwen 0,5B fica com</small><b id="qmTam">988 MB</b></div>
+          </div>
+          <div class="ctl">Bits <div class="seg" id="qBits"><button data-b="2">2</button><button data-b="3">3</button><button data-b="4" aria-pressed="true">4</button><button data-b="8">8</button></div>
+            <label style="display:flex;gap:6px;align-items:center;margin-left:auto"><input type="checkbox" id="qOut"> incluir um outlier</label></div>
+        </div>
+        <div class="palco-txt" id="qTxt"></div>
+      </div>
+    </section>
+
+    <!-- ===================== 03 ===================== -->
+    <section class="cap" id="poda" style="--c:var(--c2)" data-revelar>
+      <div class="cap-head"><span class="cap-num">03</span><h2 class="display">Pruning: tirar pesos</h2></div>
+      <p class="texto">Depois do treino, muitos pesos ficam quase em zero e mudam pouco a resposta. Pruning é removê-los. O detalhe que decide tudo: remover <b>pesos soltos</b> ou <b>linhas inteiras</b>.</p>
+      <div class="palco">
+        <div class="palco-vis">
+          <div class="matriz" id="pMat" aria-label="Matriz de pesos 8 por 12"></div>
+          <div class="medidor">
+            <div class="medidor-leg"><span>Memória ocupada por esta matriz</span><b id="pMemTxt">100%</b></div>
+            <div class="medidor-bar"><i id="pMem" style="width:100%"></i></div>
+            <div class="medidor-leg"><span id="pPos">96 posições guardadas</span><span id="pZer">0 zeros</span></div>
+          </div>
+        </div>
+        <div class="palco-txt" id="pTxt"></div>
+      </div>
+    </section>
+
+    <!-- ===================== 04 ===================== -->
+    <section class="cap" id="dest" style="--c:var(--c3)" data-revelar>
+      <div class="cap-head"><span class="cap-num">04</span><h2 class="display">Destilação: um aluno menor</h2></div>
+      <p class="texto">Em vez de encolher o modelo grande, treina-se um modelo pequeno do zero para <b>imitar</b> o grande. O segredo está no que o aluno copia: não só a resposta certa, mas a dúvida inteira do professor.</p>
+      <div class="palco">
+        <div class="palco-vis">
+          <div class="redes" id="dRedes"></div>
+          <p style="margin:0;text-align:center;font:500 1rem var(--font-mono)">"O <span style="border-bottom:2px solid var(--c3);padding:0 18px"></span> subiu no telhado."</p>
+          <div class="dist" id="dDist"></div>
+          <div class="metricas" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+            <div><small>Passo de treino</small><b id="dmPasso">0</b></div>
+            <div><small>Distância aluno ↔ professor (KL)</small><b id="dmKL">—</b></div>
+            <div><small>Tamanho</small><b>3B → 0,5B</b></div>
+          </div>
+        </div>
+        <div class="palco-txt" id="dTxt"></div>
+      </div>
+    </section>
+
+    <!-- ===================== 05 ===================== -->
+    <section class="cap" id="kv" style="--c:var(--c4)" data-revelar>
+      <div class="cap-head"><span class="cap-num">05</span><h2 class="display">KV cache: a memória da conversa</h2></div>
+      <p class="texto">As três famílias anteriores mexem nos pesos, que têm tamanho fixo. O KV cache é diferente: <b>ele cresce enquanto o modelo escreve</b>, um pouco a cada palavra, e cresce de novo para cada pessoa usando o servidor ao mesmo tempo.</p>
+      <div class="palco">
+        <div class="palco-vis">
+          <div class="frase" id="kFrase" aria-live="polite"></div>
+          <div class="kvgrade" id="kGrade"></div>
+          <div class="comp" id="kComp" hidden></div>
+          <div class="metricas">
+            <div><small>Tokens escritos</small><b id="kmTok">0</b></div>
+            <div><small>Por token (Qwen 0,5B)</small><b id="kmPor">12 KB</b></div>
+            <div><small>Cache agora</small><b id="kmTot">0 KB</b></div>
+            <div><small>Modo</small><b id="kmModo">FP16</b></div>
+          </div>
+        </div>
+        <div class="palco-txt" id="kTxt"></div>
+      </div>
+    </section>
+
+    <!-- ===================== 06 ===================== -->
+    <section class="cap" id="lado" data-revelar>
+      <div class="cap-head"><span class="cap-num">06</span><h2 class="display">As quatro, lado a lado</h2></div>
+      <p class="texto">Todas diminuem bytes, mas cobram em moedas diferentes. As duas colunas que mais pesam na decisão são <b>precisa treinar?</b> e <b>fica mais rápido?</b></p>
+      <div class="card" style="margin-top:28px;overflow-x:auto">
+        <table class="tabela" style="min-width:820px">
+          <thead><tr><th>Família</th><th>O que diminui</th><th>Quanto, tipicamente</th><th>Precisa treinar?</th><th>Fica mais rápido?</th><th>Onde quebra</th></tr></thead>
+          <tbody>
+            <tr><td><span class="fam" style="--c:var(--c1)">Quantização</span></td><td>Bits de cada peso</td><td>2× a 4×</td><td class="sim">Não</td><td class="sim">Sim: o decode lê menos bytes</td><td>Abaixo de 4 bits; outliers</td></tr>
+            <tr><td><span class="fam" style="--c:var(--c2)">Pruning solto</span></td><td>Nada, sem formato esparso</td><td>0× (2:4: até ~1,8×)</td><td class="talvez">Pouco</td><td class="talvez">Só com kernel esparso</td><td>Zerar 50% raramente dá 2×</td></tr>
+            <tr><td><span class="fam" style="--c:var(--c2)">Pruning estruturado</span></td><td>Número de pesos</td><td>Proporcional ao corte</td><td class="talvez">Sim, para recuperar</td><td class="sim">Sim</td><td>Sem re-treino a qualidade cai</td></tr>
+            <tr><td><span class="fam" style="--c:var(--c3)">Destilação</span></td><td>O modelo inteiro</td><td>O quanto quiser</td><td class="talvez">Sim, o aluno todo</td><td class="sim">Sim</td><td>Capacidade do aluno</td></tr>
+            <tr><td><span class="fam" style="--c:var(--c4)">Compressão de KV</span></td><td>Cache da conversa</td><td>2× a 4×, ou janela</td><td class="sim">Não</td><td class="talvez">Em contexto longo</td><td>Detalhes distantes no contexto</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================== 07 ===================== -->
+    <section class="cap" id="receita" data-revelar>
+      <div class="cap-head"><span class="cap-num">07</span><h2 class="display">Monte a sua receita</h2></div>
+      <p class="texto">Agora junte tudo. O ponto de partida é o modelo da oficina de Docker em FP16, com 2 048 tokens de contexto e os buffers do servidor. Ligue as famílias e veja, na cascata, de onde sai cada megabyte e quanto cada passo custa.</p>
+      <div class="lab">
+        <div class="lab-in">
+          <div class="card lab-base">
+            <label class="campo"><span>Modelo de partida</span><select id="rModelo"></select></label>
+            <label class="campo"><span>Orçamento</span><select id="rOrc"><option value="250">250 MB</option><option value="500" selected>500 MB</option><option value="1000">1 GB</option><option value="2000">2 GB</option><option value="4000">4 GB</option></select></label>
+            <label class="campo"><span>Contexto (tokens) <output id="rCtxO"></output></span><input type="range" id="rCtx" min="0" max="6" value="2"></label>
+            <label class="campo"><span>Pedidos simultâneos <output id="rPedO"></output></span><input type="range" id="rPed" min="1" max="16" value="1"></label>
+            <label class="campo"><span>Buffers (MB)</span><input type="number" id="rBuf" min="0" max="4000" step="10" value="60"></label>
+          </div>
+          <div class="card ing" id="iQuant" style="--c:var(--c1)">
+            <div class="ing-top"><button class="sw" aria-label="Ligar quantização"></button><b>Quantização</b><small id="iQuantE"></small></div>
+            <div class="ing-corpo"><select class="entrada" id="rFmt"></select></div>
+          </div>
+          <div class="card ing" id="iKv" style="--c:var(--c4)">
+            <div class="ing-top"><button class="sw" aria-label="Ligar compressão de KV"></button><b>Compressão de KV</b><small id="iKvE"></small></div>
+            <div class="ing-corpo"><div class="seg" id="rKv"><button data-v="q8" aria-pressed="true">Q8_0</button><button data-v="q4">Q4_0</button></div></div>
+          </div>
+          <div class="card ing" id="iPoda" style="--c:var(--c2)">
+            <div class="ing-top"><button class="sw" aria-label="Ligar pruning"></button><b>Pruning estruturado</b><small id="iPodaE"></small></div>
+            <div class="ing-corpo"><label class="campo"><span>Remover dos blocos <output id="rPodaO"></output></span><input type="range" id="rPoda" min="5" max="50" step="5" value="20"></label></div>
+          </div>
+          <div class="card ing" id="iDest" style="--c:var(--c3)">
+            <div class="ing-top"><button class="sw" aria-label="Ligar destilação"></button><b>Destilação</b><small id="iDestE"></small></div>
+            <div class="ing-corpo"><select class="entrada" id="rAluno"></select></div>
+          </div>
+        </div>
+
+        <div class="card lab-out">
+          <div class="veredito"><span class="grande" id="rTotal">0 MB</span><span class="chip" id="rChip"></span><span class="muted" id="rDif"></span></div>
+          <svg class="cascata" id="rSvg" viewBox="0 0 640 300" role="img" aria-label="Cascata de memória"></svg>
+          <div>
+            <div class="composicao" id="rComp"><i style="background:var(--fg)"></i><i style="background:var(--c4)"></i><i style="background:var(--faint)"></i></div>
+            <div class="leg" style="margin-top:8px" id="rLeg"></div>
+          </div>
+          <ul class="custos" id="rCustos"></ul>
+          <div class="fatos">
+            <div class="fato"><small>Pesos efetivos</small><b id="rfP"></b><span id="rfPs"></span></div>
+            <div class="fato"><small>Lidos a cada token</small><b id="rfL"></b><span>pesos + cache</span></div>
+            <div class="fato"><small>Teto de velocidade</small><b id="rfT"></b><span id="rfTs"></span></div>
+          </div>
+          <p class="dica" id="rDica"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== 08 ===================== -->
+    <section class="cap" id="resposta" data-revelar>
+      <div class="cap-head"><span class="cap-num">08</span><h2 class="display">A resposta: por onde começar</h2></div>
+      <p class="texto">A ordem segue o custo. Primeiro o que não exige treino e ataca o maior termo da conta; por último, o que exige GPU, dados e semanas.</p>
+      <div class="ordem">
+        <div class="card" style="--c:var(--c1)"><small>1º · quantização</small><h3>Ataque os pesos</h3><p>São o maior termo da conta. Não precisa treinar, leva minutos, o original continua lá. E como gerar texto é limitado por leitura de memória, menos bytes viram mais tokens por segundo.</p></div>
+        <div class="card" style="--c:var(--c4)"><small>2º · KV cache</small><h3>Se o contexto for grande</h3><p>É uma opção do servidor. Com 2 mil tokens e um pedido, o cache de um 0,5B é pequeno; com 32 mil tokens ou vários pedidos, vira o maior gasto.</p></div>
+        <div class="card" style="--c:var(--c3)"><small>3º · destilar ou podar</small><h3>Se nem em 4 bits couber</h3><p>Aí o problema é o número de pesos, e só tirando pesos. As duas exigem treino e, na prática, andam juntas: poda seguida de destilação.</p></div>
+      </div>
+      <div class="resposta" id="resp"></div>
+
+      <h3 class="display" style="font-size:1.4rem;margin-top:56px">Onde as outras frentes do PDC entram</h3>
+      <div class="frentes">
+        <div class="card frente"><small>Pré-treino</small><b>Treinar sabendo que vai quantizar</b><p>Quantização no treino (QAT) e quantização dinâmica fazem o modelo perder menos em 4 bits.</p></div>
+        <div class="card frente"><small>Treino do aluno</small><b>Destilação</b><p>O caminho para um modelo de 0,3B com qualidade. Compressão 2/2, semana 12.</p></div>
+        <div class="card frente"><small>Benchmarks</small><b>Qualidade depois de comprimir</b><p>Perplexidade estável esconde degradação. Cada receita precisa de um teste que pegue o que ela quebra.</p></div>
+        <div class="card frente"><small>Kernels / HPC</small><b>Bits viram velocidade?</b><p>Sem um kernel para 4 bits ou para 2:4, a compressão economiza disco mas não tempo.</p></div>
+        <div class="card frente"><small>Infraestrutura</small><b>Cache e batching</b><p>Cache quantizado, PagedAttention e prefix caching moram no servidor de inferência.</p></div>
+        <div class="card frente"><small>Testbench</small><b>Medir antes e depois</b><p>Toda receita fecha com a mesma medição, no mesmo container, antes e depois. <a href="../../testbench/index.html">Abrir a bancada →</a></p></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<footer class="rodape"><div class="wrap"><span>Time de Compressão e Testbench · PDC · SLMs</span><span>Contas em <span class="mono">laboratorios/compressao/calculo.js</span>, testadas em <span class="mono">tests/calculo.test.js</span></span></div></footer>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+"use strict";
+const C = window.Calculo, $ = id => document.getElementById(id);
+const reduzir = window.Tema && Tema.reduzir;
+const fmt = (n, d = 0) => n.toLocaleString("pt-BR", { maximumFractionDigits: d, minimumFractionDigits: d });
+const mb = b => b >= 1e9 ? fmt(b / 1e9, b >= 1e10 ? 0 : 2) + " GB" : b >= 1e6 ? fmt(b / 1e6) + " MB" : fmt(b / 1e3) + " KB";
+const NS = "http://www.w3.org/2000/svg";
+const svgEl = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
+
+/* ---------- passos (componente comum dos capítulos 02 a 05) ---------- */
+function Passos(alvo, passos, aoMudar, cor) {
+  let i = 0;
+  const desenhar = () => {
+    const p = passos[i];
+    alvo.innerHTML = `<div class="passo-anim" style="display:flex;flex-direction:column;gap:14px">
+        <span class="passo-n">Passo ${i + 1} de ${passos.length}</span><h3>${p.titulo}</h3>${p.texto.map(t => `<p>${t}</p>`).join("")}</div>
+      <div class="nav-passos"><div class="pontos">${passos.map((_, k) => `<button aria-label="Passo ${k + 1}" aria-current="${k === i}" data-k="${k}"></button>`).join("")}</div>
+        <button class="btn peq" data-d="-1" ${i === 0 ? "disabled" : ""}>Anterior</button>
+        <button class="btn peq primario" data-d="1" style="background:var(--c);border-color:var(--c)" ${i === passos.length - 1 ? "disabled" : ""}>Próximo</button></div>`;
+    aoMudar(i);
+  };
+  alvo.addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b || b.disabled) return;
+    if (b.dataset.k != null) i = +b.dataset.k; else if (b.dataset.d) i = Math.max(0, Math.min(passos.length - 1, i + +b.dataset.d));
+    desenhar();
+  });
+  desenhar();
+  return { atual: () => i, redesenhar: () => aoMudar(i) };
+}
+const seg = (el, fn) => el.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  [...el.querySelectorAll("button")].forEach(x => x.setAttribute("aria-pressed", x === b)); fn(b);
+});
+
+/* =============== 01 · tamanho =============== */
+(function () {
+  const sel = $("tModelo");
+  sel.innerHTML = C.MODELOS.map(m => `<option value="${m.id}" ${m.oficina ? "selected" : ""}>${m.nome}${m.oficina ? " (oficina)" : ""}</option>`).join("");
+  let bytes = 2, anterior = 0;
+  function atualizar() {
+    const m = C.modelo(sel.value), total = m.total * bytes, orc = 500e6;
+    $("tPesos").textContent = fmt(m.total / 1e6) + " M";
+    $("tBytes").textContent = fmt(bytes, bytes < 1 ? 1 : 0);
+    Tema.animarNumero(anterior, total, 700, v => $("tTotal").textContent = mb(v));
+    anterior = total;
+    const escala = Math.max(total, orc) * 1.12;
+    $("tBarra").style.width = (total / escala * 100) + "%";
+    $("tBarra").classList.toggle("passa", total > orc);
+    $("tLim").style.left = (orc / escala * 100) + "%";
+    $("tEsc").textContent = mb(escala);
+    $("tCabe").textContent = total > orc ? `passa ${mb(total - orc)} de 500 MB` : `cabe em 500 MB, sobram ${mb(orc - total)}`;
+  }
+  sel.addEventListener("change", atualizar);
+  seg($("tFmt"), b => { bytes = +b.dataset.b; atualizar(); });
+  atualizar();
+})();
+
+/* =============== 02 · quantização =============== */
+(function () {
+  const rnd = C.gerador(11);
+  const base = Array.from({ length: 16 }, () => +(C.gauss(rnd) * 0.55).toFixed(3));
+  const OUT = 3.4;
+  const svg = $("qSvg"), W = 640, X0 = 30, X1 = 610, LY = 150;
+  let bits = 4, outlier = false, passo = 0;
+
+  // camadas
+  const gTicks = svgEl("g", {}), gErr = svgEl("g", {}), gGhost = svgEl("g", {}), gDots = svgEl("g", {});
+  svg.append(svgEl("line", { x1: X0, x2: X1, y1: LY, y2: LY, stroke: "var(--line-strong)", "stroke-width": 2 }), gTicks, gErr, gGhost, gDots);
+  const lblMin = svgEl("text", { y: LY + 22, "text-anchor": "start" }), lblMax = svgEl("text", { y: LY + 22, "text-anchor": "end" });
+  svg.append(lblMin, lblMax);
+  const pontos = [...base, OUT].map((v, i) => {
+    const y = 48 + (i % 5) * 17;
+    const ghost = svgEl("circle", { r: 5, fill: "none", stroke: "var(--faint)", "stroke-width": 1.5, class: "t", opacity: 0 });
+    const err = svgEl("line", { stroke: "var(--bad)", "stroke-width": 2, opacity: 0, class: "t", "stroke-linecap": "round" });
+    const dot = svgEl("circle", { r: 6, fill: "var(--c1)", stroke: "var(--surface)", "stroke-width": 2, class: "t" });
+    gGhost.append(ghost); gErr.append(err); gDots.append(dot);
+    return { v, y, ghost, err, dot, outlier: i === base.length };
+  });
+  let ticks = [];
+
+  function render() {
+    const vals = outlier ? [...base, OUT] : base;
+    const dom = [Math.min(...vals) - 0.15, Math.max(...vals) + 0.15];
+    const x = v => X0 + (v - dom[0]) / (dom[1] - dom[0]) * (X1 - X0);
+    const q = C.quantizar(vals, bits);
+    const mostraTicks = passo >= 1, snap = passo >= 2;
+    // régua
+    const n = q.niveis;
+    while (ticks.length < 256) { const t = svgEl("line", { y1: 30, y2: LY + 6, stroke: "var(--c1)", "stroke-width": 1, opacity: 0, class: "t" }); gTicks.append(t); ticks.push(t); }
+    ticks.forEach((t, k) => {
+      const ativo = mostraTicks && k < n;
+      const xv = ativo ? x(q.minimo + k * q.escala) : x(q.minimo);
+      t.style.transform = `translateX(${xv}px)`;
+      t.setAttribute("opacity", ativo ? (n > 32 ? 0.25 : 0.45) : 0);
+      t.style.transitionDelay = ativo && !reduzir ? `${Math.min(k, 40) * 12}ms` : "0ms";
+    });
+    lblMin.setAttribute("x", X0); lblMax.setAttribute("x", X1);
+    lblMin.textContent = mostraTicks ? `mín ${fmt(q.minimo, 2)}` : fmt(dom[0], 2);
+    lblMax.textContent = mostraTicks ? `máx ${fmt(q.minimo + (n - 1) * q.escala, 2)}` : fmt(dom[1], 2);
+    // pontos
+    let iv = 0;
+    pontos.forEach(p => {
+      const visivel = !p.outlier || outlier;
+      const k = visivel ? iv++ : -1;
+      const xo = x(p.v), xq = k >= 0 ? x(q.deq[k]) : xo;
+      const xs = snap ? xq : xo;
+      p.dot.style.transform = `translate(${xs}px, ${p.y}px)`;
+      p.dot.setAttribute("opacity", visivel ? 1 : 0);
+      p.dot.setAttribute("fill", p.outlier ? "var(--c2)" : "var(--c1)");
+      p.ghost.style.transform = `translate(${xo}px, ${p.y}px)`;
+      p.ghost.setAttribute("opacity", visivel && snap ? 1 : 0);
+      p.err.setAttribute("x1", Math.min(xo, xq)); p.err.setAttribute("x2", Math.max(xo, xq) + 0.01);
+      p.err.setAttribute("y1", p.y); p.err.setAttribute("y2", p.y);
+      p.err.setAttribute("opacity", visivel && snap ? 0.9 : 0);
+      p.err.style.transitionDelay = snap && !reduzir ? "450ms" : "0ms";
+    });
+    // códigos guardados
+    $("qCodigos").innerHTML = passo >= 3 ? `<div class="passo-anim" style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;font:500 .8rem var(--font-mono)">
+        <span class="muted" style="margin-right:6px">guardado:</span>${q.q.map((c, i) => `<span style="padding:3px 6px;border-radius:4px;background:${outlier && i === q.q.length - 1 ? "var(--c2-soft)" : "var(--c1-soft)"}">${c}</span>`).join("")}
+        <span class="muted" style="margin-left:6px">+ escala ${fmt(q.escala, 3)} + mínimo ${fmt(q.minimo, 2)}</span></div>` : "";
+    // métricas
+    const bitsMostrados = passo === 0 ? 16 : bits;
+    $("qmBits").textContent = bitsMostrados;
+    $("qmNiv").textContent = fmt(passo === 0 ? 65536 : n);
+    $("qmErr").textContent = snap ? fmt(q.erroRMS, 3) : "0";
+    const fmtQ = { 2: "Q2_K", 3: "Q3_K_M", 4: "Q4_K_M", 8: "Q8_0" }[bits];
+    $("qmTam").textContent = mb(C.memoria({ modelo: "qwen05", formato: passo === 0 ? "F16" : fmtQ, ctx: 0, embSeparada: false }).pesos);
+  }
+  const passos = [
+    { titulo: "Os pesos são números com vírgula", texto: ["Aqui estão 16 pesos de uma linha de uma matriz. Em <b>FP16</b> cada um ocupa 16 bits e pode assumir cerca de 65 mil valores diferentes: dá para guardar quase qualquer número com muita precisão.", "O modelo da oficina tem 494 milhões desses números."] },
+    { titulo: "Uma régua com poucos degraus", texto: ["Com <b>4 bits</b> só existem 2⁴ = <b>16 valores possíveis</b>. Coloca-se uma régua de 16 degraus, do menor ao maior peso do grupo.", "Troque os bits embaixo da figura: com 2 bits são só 4 degraus; com 8, são 256."] },
+    { titulo: "Cada peso vai para o degrau mais próximo", texto: ["Esse arredondamento é a quantização. O traço vermelho é o <b>erro</b> de cada peso: a distância entre onde ele estava (círculo vazio) e onde ficou.", "O erro nunca passa de meio degrau. Menos bits, degraus mais largos, erro maior."] },
+    { titulo: "O que de fato fica guardado", texto: ["Em vez de 16 números de 16 bits, guarda-se o <b>número do degrau</b> de cada peso (de 0 a 15, cabe em 4 bits) mais dois números por grupo: a escala e o mínimo.", "Na hora de usar, o modelo refaz a conta: mínimo + degrau × escala. É assim que um arquivo fica cerca de <b>4× menor</b>."] },
+    { titulo: "O problema dos outliers", texto: ["Marque <b>incluir um outlier</b>: um peso muito maior que os outros. A régua precisa ir até ele, os degraus ficam largos e <b>todos os outros pesos</b> perdem precisão.", "É por isso que os métodos sérios (GPTQ, AWQ, k-quants) usam grupos pequenos e tratam outliers à parte. É o tema da Quantização 2/3."] },
+  ];
+  requestAnimationFrame(() => requestAnimationFrame(() => svg.classList.remove("sem-anim")));
+  const ctrl = Passos($("qTxt"), passos, k => { passo = k; if (k === 4 && !outlier) { outlier = true; $("qOut").checked = true; } render(); });
+  seg($("qBits"), b => { bits = +b.dataset.b; render(); });
+  $("qOut").addEventListener("change", e => { outlier = e.target.checked; render(); });
+})();
+
+/* =============== 03 · pruning =============== */
+(function () {
+  const rnd = C.gerador(23), L = 8, Cc = 12;
+  // linhas com "importância" diferente: algumas quase vazias, como neurônios pouco usados
+  const forca = [1, 0.35, 1.1, 0.9, 0.3, 1.2, 0.45, 1];
+  const W = Array.from({ length: L }, (_, r) => Array.from({ length: Cc }, () => C.gauss(rnd) * forca[r]));
+  const max = Math.max(...W.flat().map(Math.abs));
+  const mat = $("pMat");
+  mat.innerHTML = W.map(row => `<div class="mlinha">${row.map(v => `<div class="mcel" style="--m:${Math.round(12 + 80 * Math.abs(v) / max)}%"></div>`).join("")}</div>`).join("");
+  const linhas = [...mat.children], cels = linhas.map(l => [...l.children]);
+  const ordem = W.flat().map((v, i) => [Math.abs(v), i]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
+  const normas = W.map((row, r) => [row.reduce((s, v) => s + v * v, 0), r]).sort((a, b) => a[0] - b[0]);
+  const corta = new Set(normas.slice(0, 3).map(x => x[1]));
+
+  function render(passo) {
+    const zero = new Set();
+    if (passo === 1) ordem.slice(0, L * Cc / 2).forEach(i => zero.add(i));
+    if (passo === 2) for (let r = 0; r < L; r++) for (let g = 0; g < Cc; g += 4) {
+      [0, 1, 2, 3].map(k => [Math.abs(W[r][g + k]), r * Cc + g + k]).sort((a, b) => a[0] - b[0]).slice(0, 2).forEach(x => zero.add(x[1]));
+    }
+    cels.flat().forEach((c, i) => {
+      c.classList.toggle("zero", zero.has(i));
+      c.style.transitionDelay = zero.has(i) && !reduzir ? `${ordem.indexOf(i) * 6}ms` : "0ms";
+    });
+    linhas.forEach((l, r) => {
+      l.classList.toggle("alvo", passo === 3 && corta.has(r));
+      l.classList.toggle("fora", passo >= 4 && corta.has(r));
+    });
+    let mem = 100, pos = 96, txt = "100%";
+    if (passo >= 4) { mem = 100 * 5 / 8; pos = 60; txt = "62,5%"; }
+    $("pMem").style.width = mem + "%"; $("pMemTxt").textContent = txt;
+    $("pPos").textContent = `${pos} posições guardadas`;
+    $("pZer").textContent = `${zero.size} zeros${passo === 2 ? " · padrão 2:4" : ""}`;
+  }
+  const passos = [
+    { titulo: "Uma matriz de pesos", texto: ["Cada quadrado é um peso. Quanto mais escuro, maior o valor (em módulo). Repare que <b>algumas linhas inteiras</b> são claras: são neurônios que contribuem pouco.", "A pergunta do pruning é: o que dá para tirar sem estragar a resposta?"] },
+    { titulo: "Zerar os pesos pequenos", texto: ["O jeito mais simples: zerar os 50% de menor valor, onde quer que estejam. Isso é <b>pruning não estruturado</b>.", "Olhe o medidor: a memória <b>não mudou</b>. A matriz continua 8 × 12 e os zeros continuam guardados. Sem um formato esparso e um kernel que pule zeros, não há ganho nenhum."] },
+    { titulo: "O padrão 2:4", texto: ["Uma saída: em cada grupo de 4 pesos, zerar exatamente os 2 menores. É o <b>2:4</b>, um padrão que GPUs NVIDIA recentes sabem pular.", "Com esse padrão e suporte do hardware, metade das contas some. Sem suporte (CPU, Raspberry), continua tudo igual. Esse é o tema de Pruning 2/2."] },
+    { titulo: "Escolher linhas inteiras", texto: ["A outra saída é <b>pruning estruturado</b>: em vez de pesos soltos, remover linhas inteiras (neurônios), cabeças de atenção ou até camadas.", "As linhas destacadas são as três de menor energia, as que menos contribuem."] },
+    { titulo: "A matriz encolhe de verdade", texto: ["Removidas as linhas, sobra uma matriz <b>5 × 12</b>: menos memória e menos contas, em qualquer hardware.", "O custo: o modelo perde capacidade e erra mais. Para recuperar, treina-se de novo por pouco tempo, ou destila-se do original (é a receita Minitron, que junta pruning e destilação)."] },
+  ];
+  Passos($("pTxt"), passos, render);
+})();
+
+/* =============== 04 · destilação =============== */
+(function () {
+  const toks = ["gato", "felino", "bichano", "cachorro", "carro"];
+  const prof = [5.2, 3.9, 3.1, 1.2, -1.5], ini = [0.3, 0.1, 0.2, 0.25, 0.15];
+  const T = 2;
+  const pP = C.softmax(prof, T);
+  let passo = 0, t = 0, timer = null;
+
+  function rede(cols, nos, cor, rot) {
+    const w = cols * 28 + 8, h = nos * 20 + 4;
+    let s = `<svg width="${w}" height="${h + 22}" viewBox="0 0 ${w} ${h + 22}" aria-hidden="true">`;
+    const pos = Array.from({ length: cols }, (_, c) => Array.from({ length: nos }, (_, n) => [10 + c * 28, 12 + n * 20]));
+    for (let c = 0; c < cols - 1; c++) for (const a of pos[c]) for (const b of pos[c + 1]) s += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="var(--line-strong)" stroke-width=".6"/>`;
+    for (const col of pos) for (const p of col) s += `<circle cx="${p[0]}" cy="${p[1]}" r="5" fill="${cor}"/>`;
+    return s + `<text x="${w / 2}" y="${h + 18}" text-anchor="middle" style="font:500 11px var(--font-mono);fill:var(--muted)">${rot}</text></svg>`;
+  }
+  $("dRedes").innerHTML = rede(5, 7, "var(--fg)", "professor · 3B") +
+    `<svg width="80" height="40" aria-hidden="true"><defs><marker id="seta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--c3)"/></marker></defs><line x1="4" y1="20" x2="74" y2="20" stroke="var(--c3)" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#seta)"><animate attributeName="stroke-dashoffset" from="18" to="0" dur="1s" repeatCount="indefinite"/></line></svg>` +
+    rede(3, 4, "var(--c3)", "aluno · 0,5B");
+
+  function aluno() { const a = 1 - Math.exp(-t / 9); return C.softmax(ini.map((v, i) => v + a * (prof[i] - v)), T); }
+  function render() {
+    const pA = aluno();
+    const col = (p, cor, on) => p.map(v => `<div class="pbar ${on ? "" : "col-off"}"><i style="width:${(v * 100).toFixed(1)}%;background:${cor}"></i><span>${on ? fmt(v * 100) + "%" : ""}</span></div>`);
+    const dado = toks.map((_, i) => i === 0 ? 1 : 0);
+    const cD = col(dado, "var(--fg)", passo >= 1), cP = col(pP, "var(--c3)", passo >= 2), cA = col(pA, "var(--c3)", passo >= 3);
+    $("dDist").innerHTML = `<span></span><span class="cab">Dado</span><span class="cab">Professor</span><span class="cab">Aluno</span>` +
+      toks.map((tk, i) => `<span class="tok">${tk}</span>${cD[i]}${cP[i]}${cA[i]}`).join("");
+    $("dDist").querySelectorAll(".pbar:nth-child(4n) i").forEach(i => i.style.opacity = .6);
+    $("dmPasso").textContent = passo >= 3 ? t : "0";
+    $("dmKL").textContent = passo >= 3 ? fmt(C.kl(pP, pA), 3) : "—";
+  }
+  function treinar() {
+    clearInterval(timer); t = 0; render();
+    if (reduzir) { t = 40; render(); return; }
+    timer = setInterval(() => { t++; render(); if (t >= 40) clearInterval(timer); }, 90);
+  }
+  const passos = [
+    { titulo: "Professor e aluno", texto: ["O <b>professor</b> é um modelo grande, já treinado e bom. O <b>aluno</b> é um modelo bem menor, que vamos treinar do zero.", "O aluno não é uma versão encolhida do professor: é outro modelo, com outra arquitetura se quisermos. É o único caminho para ir de 3B para 0,5B ou menos."] },
+    { titulo: "O que o texto de treino ensina", texto: ["Na frase de exemplo, o texto de treino só diz uma coisa: a palavra certa é <b>gato</b>, com 100%.", "Para o dado, \"felino\" está tão errado quanto \"carro\". Essa informação é pobre."] },
+    { titulo: "O que o professor ensina", texto: ["O professor dá uma <b>probabilidade para cada palavra</b>: gato é a mais provável, mas felino e bichano também fazem sentido, e carro não faz nenhum.", "Essa nuance, chamada de <b>rótulo suave</b>, não está em lugar nenhum do texto. É o que o aluno aprende a mais quando é treinado para copiar o professor."] },
+    { titulo: "Treinando o aluno", texto: ["A cada passo de treino o aluno ajusta seus pesos para que a distribuição dele fique mais parecida com a do professor. A distância entre as duas (KL) cai.", "<button class=\"btn peq\" id=\"dPlay\">Treinar de novo</button>"] },
+    { titulo: "O custo", texto: ["Quantização e compressão de KV custam minutos. Destilação custa um <b>treino inteiro</b>: GPU, um corpus grande e dias ou semanas.", "Em troca, é a família que mais reduz. Por isso ela entra por último na receita, quando as outras não bastam. É o tema da Compressão 2/2 (semana 12)."] },
+  ];
+  Passos($("dTxt"), passos, k => { passo = k; clearInterval(timer); if (k === 3) treinar(); else { t = k > 3 ? 40 : 0; render(); } });
+  $("dTxt").addEventListener("click", e => { if (e.target.id === "dPlay") treinar(); });
+})();
+
+/* =============== 05 · KV cache =============== */
+(function () {
+  const frase = "Comprimir é trocar memória por qualidade , com cuidado e medição .".split(" ");
+  const CAM = ["camada 1", "camada 2", "camada 3", "⋯ camada 24"];
+  const POR = C.kvPorToken(C.modelo("qwen05"), 16);
+  let passo = 0, n = 0, modo = "f16", timer = null, ctx = 2048, ped = 1;
+
+  function renderGrade() {
+    $("kFrase").innerHTML = frase.slice(0, n).map((w, i) => `<span class="${i === n - 1 ? "novo" : ""}">${w}</span>`).join("");
+    const JAN = 6;
+    $("kGrade").innerHTML = CAM.map(c => `<small>${c}</small><div class="kvlinha">${Array.from({ length: n }, (_, i) =>
+      `<div class="kvc ${modo === "q8" ? "meio" : ""} ${modo === "jan" && i < n - JAN ? "fora" : ""}" title="token ${i + 1}: K e V"><i></i><i></i></div>`).join("")}</div>`).join("");
+    const vivos = modo === "jan" ? Math.min(n, JAN) : n;
+    const por = modo === "q8" ? POR * 8.5 / 16 : POR;
+    $("kmTok").textContent = n;
+    $("kmPor").textContent = mb(por);
+    $("kmTot").textContent = mb(vivos * por);
+    $("kmModo").textContent = { f16: "FP16", q8: "Q8_0", jan: "janela 6" }[modo];
+  }
+  function gerar() {
+    clearInterval(timer); n = 0; renderGrade();
+    if (reduzir) { n = frase.length; renderGrade(); return; }
+    timer = setInterval(() => { n++; renderGrade(); if (n >= frase.length) clearInterval(timer); }, 380);
+  }
+  const CTX = [512, 1024, 2048, 4096, 8192, 16384, 32768];
+  function renderComp() {
+    const pesos = C.memoria({ modelo: "qwen05", formato: "Q4_K_M", ctx: 0 }).pesos;
+    const kv = POR * ctx * ped * (modo === "q8" ? 8.5 / 16 : 1) * (modo === "jan" ? Math.min(1, 4096 / ctx) : 1);
+    const m = Math.max(pesos, kv);
+    $("kComp").innerHTML = `
+      <div class="ctl"><span>Contexto</span><input type="range" id="kCtx" min="0" max="6" value="${CTX.indexOf(ctx)}" style="flex:1"><b class="mono">${fmt(ctx)}</b></div>
+      <div class="ctl"><span>Pedidos ao mesmo tempo</span><input type="range" id="kPed" min="1" max="16" value="${ped}" style="flex:1"><b class="mono">${ped}</b></div>
+      <div class="comp-l" style="--c:var(--fg)"><span>Pesos Q4</span><div class="pbar"><i style="width:${pesos / m * 100}%"></i></div><b>${mb(pesos)}</b></div>
+      <div class="comp-l" style="--c:var(--c4)"><span>KV cache</span><div class="pbar"><i style="width:${kv / m * 100}%"></i></div><b>${mb(kv)}</b></div>`;
+  }
+  $("kComp").addEventListener("input", e => {
+    if (e.target.id === "kCtx") ctx = CTX[+e.target.value];
+    if (e.target.id === "kPed") ped = +e.target.value;
+    renderComp();
+  });
+  const passos = [
+    { titulo: "Por que o cache existe", texto: ["Para escrever a próxima palavra, a atenção olha para <b>todas as anteriores</b>. Recalcular tudo a cada palavra seria lento demais.", "Então, para cada palavra já vista, cada camada guarda dois vetores: uma <b>chave (K)</b> e um <b>valor (V)</b>. Cada coluninha na figura é um par K/V."] },
+    { titulo: "Ele cresce a cada palavra", texto: ["Veja o modelo escrevendo: cada palavra nova acrescenta um par K/V em <b>todas as 24 camadas</b>.", "No Qwen 0,5B isso dá 2 × 24 camadas × 2 cabeças × 64 números × 2 bytes = <b>12 KB por token</b>. <button class=\"btn peq\" id=\"kPlay\">Escrever de novo</button>"] },
+    { titulo: "Quanto pesa de verdade", texto: ["12 KB parece nada. Mas multiplique pelo <b>contexto</b> e pelo número de <b>pedidos ao mesmo tempo</b>.", "Arraste os controles: com 8 pedidos de 32 mil tokens, o cache passa de <b>3 GB</b>, seis vezes os pesos do modelo."] },
+    { titulo: "Comprimir o cache", texto: ["Duas saídas, as duas configuráveis no servidor: guardar K e V com <b>menos bits</b> (Q8 corta quase pela metade) ou guardar só as <b>últimas palavras</b> (uma janela).", "<span class=\"seg\" id=\"kModo\"><button data-m=\"f16\">FP16</button><button data-m=\"q8\">Q8_0</button><button data-m=\"jan\">Janela</button></span>", "A janela economiza mais, mas o modelo esquece o começo da conversa. É o tema de Infraestrutura 2/2."] },
+  ];
+  Passos($("kTxt"), passos, k => {
+    passo = k; clearInterval(timer);
+    $("kComp").hidden = k !== 2;
+    if (k === 1) gerar(); else { n = frase.length; renderGrade(); }
+    if (k === 2) renderComp();
+    if (k === 3) {
+      const s = $("kModo"); s.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.m === modo));
+      seg(s, b => { modo = b.dataset.m; renderGrade(); });
+    }
+  });
+  $("kTxt").addEventListener("click", e => { if (e.target.id === "kPlay") gerar(); });
+})();
+
+/* =============== 07 · receita =============== */
+const Receita = (function () {
+  const CTX = [512, 1024, 2048, 4096, 8192, 16384, 32768];
+  const BANDA = 51.2; // notebook da oficina (i5-1135G7, DDR4-3200 em dois canais)
+  const ON = { quant: false, kv: false, poda: false, dest: false };
+  let kvModo = "q8";
+  $("rModelo").innerHTML = C.MODELOS.map(m => `<option value="${m.id}" ${m.oficina ? "selected" : ""}>${m.nome}${m.oficina ? " (oficina)" : ""}</option>`).join("");
+  $("rFmt").innerHTML = C.FORMATOS.filter(f => f.id !== "F16").map(f => `<option value="${f.id}" ${f.id === "Q4_K_M" ? "selected" : ""}>${f.nome}</option>`).join("");
+  function alunos() {
+    const base = C.modelo($("rModelo").value), atual = $("rAluno").value;
+    const ops = C.MODELOS.filter(m => m.total < base.total);
+    $("rAluno").innerHTML = ops.length ? ops.map(m => `<option value="${m.id}">${m.nome}</option>`).join("") : `<option value="">nenhum modelo menor na lista</option>`;
+    if (ops.some(m => m.id === atual)) $("rAluno").value = atual;
+    else if (ops.length) $("rAluno").value = ops[ops.length - 1].id;
+  }
+  const ING = { quant: "iQuant", kv: "iKv", poda: "iPoda", dest: "iDest" };
+  Object.entries(ING).forEach(([k, id]) => $(id).querySelector(".ing-top").addEventListener("click", () => { ON[k] = !ON[k]; $(id).classList.toggle("on", ON[k]); calc(); }));
+  seg($("rKv"), b => { kvModo = b.dataset.v; calc(); });
+  ["rModelo", "rOrc", "rCtx", "rPed", "rBuf", "rFmt", "rPoda", "rAluno"].forEach(id => $(id).addEventListener("input", () => { if (id === "rModelo") alunos(); calc(); }));
+
+  const svg = $("rSvg"), W = 640, H = 300, ML = 8, MR = 8, MT = 26, MB = 54;
+  const tip = $("tip");
+  svg.addEventListener("mousemove", e => { const t = e.target.closest("[data-tip]"); if (!t) { tip.hidden = true; return; } tip.textContent = t.dataset.tip; tip.hidden = false; tip.style.left = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8) + "px"; tip.style.top = (e.clientY - 40) + "px"; });
+  svg.addEventListener("mouseleave", () => tip.hidden = true);
+  const COR = { base: "var(--faint)", quant: "var(--c1)", kv: "var(--c4)", poda: "var(--c2)", dest: "var(--c3)" };
+
+  function cascata(r, orc) {
+    const passos = r.cascata, n = passos.length + 1;
+    const maxV = Math.max(passos[0].total, orc) * 1.08;
+    const y = v => MT + (H - MT - MB) * (1 - v / maxV);
+    const banda = (W - ML - MR) / n, bw = Math.min(70, banda * 0.62);
+    // recicla elementos para as barras animarem entre estados
+    let g = svg.querySelector("g.barras");
+    if (!g) {
+      svg.innerHTML = "";
+      [0.25, 0.5, 0.75, 1].forEach(() => svg.append(svgEl("line", { class: "grid", x1: ML, x2: W - MR })));
+      g = svgEl("g", { class: "barras" }); svg.append(g);
+      svg.append(svgEl("line", { class: "orc", x1: ML, x2: W - MR, stroke: "var(--fg)", "stroke-width": 1.5, "stroke-dasharray": "5 4" }));
+      svg.append(svgEl("text", { class: "orcT", "text-anchor": "end" }));
+    }
+    [...svg.querySelectorAll("line.grid")].forEach((l, i) => { const v = maxV * [0.25, 0.5, 0.75, 1][i]; l.setAttribute("y1", y(v)); l.setAttribute("y2", y(v)); });
+    const itens = [...passos.map((p, i) => ({ id: p.id, rot: p.rotulo, de: i === 0 ? 0 : passos[i - 1].total, ate: p.total, eco: p.economia })),
+                   { id: "fim", rot: "Resultado", de: 0, ate: passos[passos.length - 1].total }];
+    while (g.children.length < itens.length) {
+      const gi = svgEl("g", {});
+      gi.append(svgEl("rect", { class: "b", rx: 4 }), svgEl("text", { class: "val", "text-anchor": "middle" }), svgEl("text", { class: "rot", "text-anchor": "middle" }), svgEl("text", { class: "rot2", "text-anchor": "middle" }));
+      g.append(gi);
+    }
+    [...g.children].forEach((gi, i) => {
+      const it = itens[i]; gi.style.display = it ? "" : "none"; if (!it) return;
+      const cx = ML + banda * (i + 0.5), topo = Math.max(it.de, it.ate), base = Math.min(it.de, it.ate);
+      const [rect, val, rot, rot2] = gi.children;
+      const ehPasso = i > 0 && it.id !== "fim";
+      const cor = it.id === "fim" ? (it.ate <= orc ? "var(--ok)" : "var(--bad)") : COR[it.id];
+      rect.setAttribute("x", cx - bw / 2); rect.setAttribute("width", bw);
+      rect.setAttribute("y", y(topo)); rect.setAttribute("height", Math.max(2, y(base) - y(topo)));
+      rect.setAttribute("fill", cor);
+      rect.setAttribute("opacity", ehPasso ? 0.9 : 1);
+      rect.dataset.tip = ehPasso ? `${it.rot}: −${mb(it.eco)} (de ${mb(it.de)} para ${mb(it.ate)})` : `${it.rot}: ${mb(it.ate)}`;
+      val.setAttribute("x", cx); val.setAttribute("y", y(topo) - 7);
+      val.textContent = ehPasso ? "−" + mb(it.eco) : mb(it.ate);
+      const [l1, ...resto] = it.rot.split(" ");
+      rot.setAttribute("x", cx); rot.setAttribute("y", H - MB + 18); rot.textContent = l1;
+      rot2.setAttribute("x", cx); rot2.setAttribute("y", H - MB + 32); rot2.textContent = resto.join(" ");
+    });
+    const lo = svg.querySelector("line.orc"), lt = svg.querySelector("text.orcT");
+    lo.setAttribute("y1", y(orc)); lo.setAttribute("y2", y(orc));
+    lt.setAttribute("x", W - MR); lt.setAttribute("y", y(orc) - 6); lt.textContent = "orçamento " + mb(orc);
+  }
+
+  let totalAnterior = 0;
+  function calc() {
+    const ctx = CTX[+$("rCtx").value], ped = +$("rPed").value, buf = Math.max(0, +$("rBuf").value || 0), orc = +$("rOrc").value * 1e6;
+    $("rCtxO").textContent = fmt(ctx); $("rPedO").textContent = ped;
+    $("rPodaO").textContent = $("rPoda").value + "%";
+    const passos = {
+      formato: ON.quant ? $("rFmt").value : null,
+      kv: ON.kv ? kvModo : null,
+      poda: ON.poda ? +$("rPoda").value / 100 : 0,
+      aluno: ON.dest && $("rAluno").value ? $("rAluno").value : null,
+    };
+    const base = { modelo: $("rModelo").value, ctx, pedidos: ped, buffersMB: buf };
+    const r = C.receita(base, passos), fim = r.fim;
+    // economia de cada ingrediente
+    const eco = Object.fromEntries(r.cascata.slice(1).map(p => [p.id, p.economia]));
+    $("iQuantE").textContent = eco.quant ? "−" + mb(eco.quant) : "";
+    $("iKvE").textContent = eco.kv ? "−" + mb(eco.kv) : "";
+    $("iPodaE").textContent = eco.poda ? "−" + mb(eco.poda) : "";
+    $("iDestE").textContent = eco.dest ? "−" + mb(eco.dest) : "";
+
+    Tema.animarNumero(totalAnterior, fim.total, 600, v => $("rTotal").textContent = mb(v));
+    totalAnterior = fim.total;
+    const cabe = fim.total <= orc;
+    $("rChip").className = "chip " + (cabe ? "ok" : "bad");
+    $("rChip").textContent = cabe ? "cabe" : "não cabe";
+    $("rDif").textContent = cabe ? `sobram ${mb(orc - fim.total)}` : `faltam ${mb(fim.total - orc)}`;
+    cascata(r, orc);
+
+    const comp = $("rComp").children;
+    comp[0].style.width = (fim.pesos / fim.total * 100) + "%";
+    comp[1].style.width = (fim.kv / fim.total * 100) + "%";
+    comp[2].style.width = (fim.buffers / fim.total * 100) + "%";
+    $("rLeg").innerHTML = `<span style="--k:var(--fg)">Pesos ${mb(fim.pesos)}</span><span style="--k:var(--c4)">KV cache ${mb(fim.kv)}</span><span style="--k:var(--faint)">Buffers ${mb(fim.buffers)}</span>`;
+
+    const custos = C.custo(passos);
+    const CORF = { quant: "var(--c1)", kv: "var(--c4)", poda: "var(--c2)", dest: "var(--c3)" };
+    $("rCustos").innerHTML = custos.length ? custos.map(c => `<li style="--c:${CORF[c.familia]}"><span><b>${{ quant: "Quantização", kv: "KV", poda: "Pruning", dest: "Destilação" }[c.familia]}.</b> ${c.texto} <span class="chip ${c.risco === "alto" ? "bad" : c.risco === "moderado" ? "warn" : "ok"}">risco ${c.risco}</span></span></li>`).join("")
+      : `<li style="--c:var(--faint)"><span class="muted">Nenhuma família ligada: é o modelo como saiu do treino.</span></li>`;
+
+    $("rfP").textContent = fmt(fim.params / 1e6) + " M";
+    $("rfPs").textContent = `${fmt(fim.emb / fim.params * 100)}% é embedding`;
+    const teto = C.tetoTokS(fim, BANDA, ped);
+    $("rfL").textContent = mb(teto.bytesPorPasso);
+    $("rfT").textContent = fmt(teto.porPedido) + " tok/s";
+    $("rfTs").textContent = "por pedido, num notebook de 51 GB/s";
+
+    // dica: o próximo passo sensato
+    let dica;
+    const m0 = C.modelo(base.modelo);
+    if (!ON.quant) dica = "Comece ligando a <b>quantização</b>: é o maior ganho sem treino nenhum.";
+    else if (cabe) dica = "Coube. Agora o trabalho é <b>medir a qualidade</b>: a receita só vale se o modelo continuar acertando o que importa. Leve para o testbench.";
+    else if (fim.kv > fim.pesos) dica = "O cache passou os pesos: ligue a <b>compressão de KV</b> ou diminua contexto e pedidos.";
+    else if (C.formato($("rFmt").value).bits > 4.9) dica = "Ainda não coube: tente um formato com menos bits, como <b>Q4_K_M</b>.";
+    else if (!ON.dest && !ON.poda) dica = `Mesmo em 4 bits, ${m0.nome} não cabe: o problema é o número de pesos. Ligue <b>destilação</b> ou <b>pruning</b>.`;
+    else dica = "Ainda não coube. Combine mais de uma família, ou revise o orçamento de buffers e de contexto.";
+    if (m0.oficina && !ON.quant && !ON.kv && !ON.poda && !ON.dest)
+      dica = "Este é o modelo da oficina em FP16: quase 1 GB só de pesos. " + dica;
+    $("rDica").innerHTML = dica;
+    resposta(base, orc);
+  }
+
+  function resposta(base, orc) {
+    const m = C.modelo(base.modelo);
+    const q4 = C.memoria({ modelo: base.modelo, formato: "Q4_K_M", ctx: base.ctx, pedidos: base.pedidos, buffersMB: base.buffersMB });
+    const q4kv = C.memoria({ modelo: base.modelo, formato: "Q4_K_M", kv: "q8", ctx: base.ctx, pedidos: base.pedidos, buffersMB: base.buffersMB });
+    const so = C.memoria({ modelo: base.modelo, formato: "Q4_K_M", ctx: 0, buffersMB: 0 });
+    let t;
+    if (q4.total <= orc) t = `<b>Quantização primeiro.</b> Com ${m.nome}, ${fmt(base.ctx)} tokens e ${base.pedidos} pedido(s), Q4_K_M sozinho chega a ${mb(q4.total)}, dentro de ${mb(orc)}. Não precisa treinar nada: quantize e meça a qualidade.`;
+    else if (q4kv.total <= orc) t = `<b>Quantização primeiro, cache em seguida.</b> Com ${m.nome}, Q4_K_M dá ${mb(q4.total)}; comprimindo o KV cache para Q8 chega a ${mb(q4kv.total)}, dentro de ${mb(orc)}. Ainda sem treino.`;
+    else if (so.pesos <= orc) t = `<b>Quantização primeiro, mas ela não basta sozinha.</b> Em Q4_K_M os pesos de ${m.nome} ocupam ${mb(so.pesos)}; somando cache e buffers vão a ${mb(q4.total)}. Corte contexto e buffers, comprima o cache e, se ainda não couber, tire pesos.`;
+    else t = `<b>Quantização primeiro, e mesmo assim não cabe.</b> Em Q4_K_M só os pesos de ${m.nome} já ocupam ${mb(so.pesos)}, acima de ${mb(orc)}. O problema é o número de pesos: o próximo passo é destilar para um aluno menor, ou podar e recuperar com treino.`;
+    $("resp").innerHTML = t + ` <span style="opacity:.7">(Calculado ao vivo com o modelo e o orçamento escolhidos no passo 07.)</span>`;
+  }
+  alunos(); calc();
+  return { calc };
+})();
+
+/* ---------- índice lateral ---------- */
+(function () {
+  const links = [...document.querySelectorAll("#indice a")];
+  const caps = links.map(a => document.querySelector(a.getAttribute("href")));
+  const io = new IntersectionObserver(ents => {
+    ents.forEach(en => { if (en.isIntersecting) links.forEach((a, i) => a.classList.toggle("ativo", caps[i] === en.target)); });
+  }, { rootMargin: "-45% 0px -50% 0px" });
+  caps.forEach(c => c && io.observe(c));
+})();
+
+document.documentElement.dataset.pronto = "1";
+
+/* ?autoteste: percorre todos os passos e ingredientes, como uma pessoa faria (usado por tests/test_paginas.py) */
+if (/[?&]autoteste/.test(location.search)) (async () => {
+  const espera = ms => new Promise(r => setTimeout(r, ms)), clicar = el => el && el.click();
+  for (const id of ["qTxt", "pTxt", "dTxt", "kTxt"]) {
+    const n = $(id).querySelectorAll(".pontos button").length;
+    for (let k = 0; k < n; k++) { clicar($(id).querySelectorAll(".pontos button")[k]); await espera(50); }
+    clicar($(id).querySelector("[data-d='-1']"));
+  }
+  for (const b of $("qBits").querySelectorAll("button")) { clicar(b); await espera(20); }
+  $("qOut").click();
+  for (const b of $("tFmt").querySelectorAll("button")) clicar(b);
+  for (const id of ["iQuant", "iKv", "iPoda", "iDest"]) $(id).querySelector(".ing-top").click();
+  for (const v of ["Q2_K", "Q8_0", "Q4_K_M"]) { $("rFmt").value = v; $("rFmt").dispatchEvent(new Event("input")); }
+  for (const m of C.MODELOS) { $("rModelo").value = m.id; $("rModelo").dispatchEvent(new Event("input")); }
+  $("rCtx").value = 6; $("rCtx").dispatchEvent(new Event("input"));
+  $("rPed").value = 16; $("rPed").dispatchEvent(new Event("input"));
+  const bars = $("rSvg").querySelectorAll("rect.b").length;
+  if (bars < 2) throw new Error("cascata sem barras");
+  document.documentElement.dataset.autoteste = "ok";
+})().catch(e => { document.documentElement.dataset.erro = "autoteste: " + e.message; });
+});
+</script>
+</body>
+</html>

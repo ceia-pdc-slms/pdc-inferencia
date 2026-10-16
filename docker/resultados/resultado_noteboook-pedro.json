@@ -1,0 +1,176 @@
+{
+  "procedencia": {
+    "data_utc": "2026-10-06T15:14:55Z",
+    "maquina": "notebook-pedro",
+    "hostname": "c0773c6e1b5b",
+    "so": "Linux-6.18.40.1-microsoft-standard-WSL2-x86_64-with-glibc2.41",
+    "arquitetura": "x86_64",
+    "cpu": "12th Gen Intel(R) Core(TM) i5-1235U",
+    "ram_gb": 7.6,
+    "python": "3.12.15",
+    "imagem_docker_digest": "ghcr.io/ggml-org/llama.cpp@sha256:af8c29600d1de84945de13fa7f126d06fdae16c4b19dc7db1c69c74287eae257",
+    "modelo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF:Q4_K_M",
+    "formato_quantizacao": "Q4_K_M",
+    "tamanho_contexto": "2048",
+    "servidor_url": "http://modelo:8080",
+    "servidor_modelos_resposta": {
+      "models": [
+        {
+          "name": "Qwen/Qwen2.5-0.5B-Instruct-GGUF:Q4_K_M",
+          "model": "Qwen/Qwen2.5-0.5B-Instruct-GGUF:Q4_K_M",
+          "modified_at": "",
+          "size": "",
+          "digest": "",
+          "type": "model",
+          "description": "",
+          "tags": [
+            ""
+          ],
+          "capabilities": [
+            "completion"
+          ],
+          "parameters": "",
+          "details": {
+            "parent_model": "",
+            "format": "gguf",
+            "family": "",
+            "families": [
+              ""
+            ],
+            "parameter_size": "",
+            "quantization_level": ""
+          }
+        }
+      ],
+      "object": "list",
+      "data": [
+        {
+          "id": "Qwen/Qwen2.5-0.5B-Instruct-GGUF:Q4_K_M",
+          "aliases": [
+            "Qwen/Qwen2.5-0.5B-Instruct-GGUF:Q4_K_M"
+          ],
+          "tags": [],
+          "object": "model",
+          "architecture": {
+            "input_modalities": [
+              "text"
+            ],
+            "output_modalities": [
+              "text"
+            ]
+          },
+          "created": 1791299673,
+          "owned_by": "llamacpp",
+          "meta": {
+            "vocab_type": 2,
+            "n_vocab": 151936,
+            "n_ctx": 2048,
+            "n_ctx_train": 32768,
+            "n_embd": 896,
+            "n_params": 630167424,
+            "size": 485452288,
+            "ftype": "Q4_K - Medium"
+          }
+        }
+      ]
+    },
+    "script_sha256": "7296a03ab9f219a4c2a055711102c11e1aab41b2d6186cf2971876e9f26a1591",
+    "como_mediu": {
+      "prompt": "Explique em um paragrafo por que ler o modelo da memoria limita a velocidade de geracao de texto.",
+      "prompt_sha256": "f3343675955d85de093c5289ca375a057a675d4cbae00e32217898b0679e92e6",
+      "max_tokens": 128,
+      "temperature": 0.0,
+      "seed": 42,
+      "warmup_descartado": 1,
+      "execucoes": 5,
+      "token_contado_como": "1 chunk de streaming com texto (aproximacao)"
+    },
+    "notas": "na tomada, modo desempenho"
+  },
+  "resumo": {
+    "ttft_s": {
+      "mean": 0.04287572740000769,
+      "stdev": 0.007442685627671566,
+      "min": 0.03456189000002041,
+      "max": 0.050357699999949546,
+      "p50": 0.046403097999984766,
+      "p95": 0.049859818399966116
+    },
+    "tpot_s": {
+      "mean": 0.028957193829921297,
+      "stdev": 0.0029094064485703616,
+      "min": 0.02694055628346471,
+      "max": 0.033569801070865914,
+      "p50": 0.027091731503937237,
+      "p95": 0.03288306025669273
+    },
+    "tok_per_s_decode": {
+      "mean": 34.79469430771294,
+      "stdev": 3.2511556211366224,
+      "min": 29.78867816014155,
+      "max": 37.118758405659555,
+      "p50": 36.911631131981,
+      "p95": 37.08932802050035
+    },
+    "tok_per_s_e2e": {
+      "mean": 34.65274747727637,
+      "stdev": 3.202266209280332,
+      "min": 29.687167318180983,
+      "max": 36.863386964824016,
+      "p50": 36.75740047569998,
+      "p95": 36.855966640278666
+    },
+    "itl_s_agregado": {
+      "p50": 0.028035530000011022,
+      "p95": 0.037875579299986833,
+      "n": 635
+    }
+  },
+  "execucoes": [
+    {
+      "ttft_s": 0.0478682920000324,
+      "tpot_s": 0.033569801070865914,
+      "e2e_s": 4.3116272640000375,
+      "n_chunks": 128,
+      "n_tokens_reported": 128,
+      "tok_per_s_decode": 29.78867816014155,
+      "tok_per_s_e2e": 29.687167318180983
+    },
+    {
+      "ttft_s": 0.046403097999984766,
+      "tpot_s": 0.027047783291338622,
+      "e2e_s": 3.482291955999983,
+      "n_chunks": 128,
+      "n_tokens_reported": 128,
+      "tok_per_s_decode": 36.971606479863546,
+      "tok_per_s_e2e": 36.75740047569998
+    },
+    {
+      "ttft_s": 0.050357699999949546,
+      "tpot_s": 0.02694055628346471,
+      "e2e_s": 3.4722799649999843,
+      "n_chunks": 128,
+      "n_tokens_reported": 128,
+      "tok_per_s_decode": 37.118758405659555,
+      "tok_per_s_e2e": 36.863386964824016
+    },
+    {
+      "ttft_s": 0.03456189000002041,
+      "tpot_s": 0.027091731503937237,
+      "e2e_s": 3.4757782060000295,
+      "n_chunks": 128,
+      "n_tokens_reported": 128,
+      "tok_per_s_decode": 36.911631131981,
+      "tok_per_s_e2e": 36.82628534209726
+    },
+    {
+      "ttft_s": 0.03518765700005133,
+      "tpot_s": 0.030136097000000004,
+      "e2e_s": 3.863626390000036,
+      "n_chunks": 128,
+      "n_tokens_reported": 128,
+      "tok_per_s_decode": 33.18279736091903,
+      "tok_per_s_e2e": 33.129497285579625
+    }
+  ]
+}

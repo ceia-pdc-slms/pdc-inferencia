@@ -1,0 +1,39 @@
+# Copie para runs/<nome-da-maquina>/<AAAA-MM-DD>_<modelo>_<formato>.yaml
+# Os campos marcados com (obrigatório) são conferidos automaticamente em todo PR.
+
+quem: ""                        # (obrigatório) seu usuário do GitHub
+data: ""                        # (obrigatório) AAAA-MM-DD
+
+maquina:
+  nome: ""                      # (obrigatório) igual ao arquivo em maquinas/, ex.: rpi5-01
+  hardware: ""                  # (obrigatório) ex.: Raspberry Pi 5 8 GB
+  sistema: ""                   # (obrigatório) SO e kernel, ex.: Raspberry Pi OS bookworm, kernel 6.6
+  alimentacao_refrigeracao: ""  # ex.: fonte oficial 27 W, cooler ativo
+
+ferramenta:
+  nome: ""                      # (obrigatório) ollama, llama.cpp, vllm, lm-studio...
+  versao: ""                    # (obrigatório) saída de `ollama --version`, ou hash do commit do llama.cpp
+  comando: ""                   # (obrigatório) o comando exato, copiado do terminal
+
+modelo:
+  nome: ""                      # (obrigatório) ex.: Qwen2.5-0.5B-Instruct
+  fonte: ""                     # (obrigatório) link do Hugging Face ou tag do Ollama
+  formato: ""                   # (obrigatório) ex.: GGUF Q4_K_M, FP16, AWQ W4A16
+  tamanho_arquivo_gb:           # ex.: 0.40
+
+contexto:
+  tokens_prompt:                # (obrigatório) tamanho do prompt, em tokens
+  tokens_gerados:               # (obrigatório) tokens gerados em cada repetição
+  prompt: ""                    # o prompt usado, ou o caminho dele em quality/
+
+metodo: ""                      # (obrigatório) de onde saiu o número e como. Ex.: "eval rate do
+                                # `ollama run --verbose`; 1 execução de aquecimento descartada; 5 repetições"
+
+resultados:
+  decode_tok_s: []              # (obrigatório) um valor por repetição, ex.: [18.2, 18.0, 18.4]
+  prefill_tok_s: []             # opcional, um valor por repetição
+  ttft_s: []                    # opcional, tempo até o primeiro token, em segundos
+  potencia_w:                   # opcional, média durante a geração (diga como mediu em observacoes)
+  temperatura_c:                # opcional, no fim da execução
+
+observacoes: ""                 # o que estranhou, o que deu errado, o que faria diferente

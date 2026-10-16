@@ -1,0 +1,44 @@
+{
+  "id": "latencia",
+  "nome": "Latência e vazão",
+  "categoria": "Desempenho",
+  "descricao": "Mede TTFT, TPOT, ITL e tok/s de um servidor compatível com OpenAI usando streaming. Roda o mesmo docker/bench.py da oficina, então a procedência é comparável com os resultados de lá.",
+  "esquema_resultado": "bench-v1",
+  "comando": ["{python}", "-u", "{raiz}/docker/bench.py"],
+  "saida": { "argumento": "--out" },
+  "progresso": "run (\\d+)/(\\d+)",
+  "parametros": [
+    { "id": "url", "rotulo": "Servidor do modelo", "grupo": "Ambiente", "tipo": "texto", "obrigatorio": true,
+      "padrao": "{modelo_url}", "argumento": "--url",
+      "ajuda": "URL vista de onde a bancada roda. Na bancada em container é http://modelo:8080." },
+    { "id": "maquina", "rotulo": "Máquina", "grupo": "Ambiente", "tipo": "texto", "obrigatorio": true,
+      "padrao": "{maquina}", "argumento": "--machine",
+      "ajuda": "Nome estável da máquina (ex.: notebook-bia, rpi5-01). O hostname do container não serve." },
+    { "id": "modelo", "rotulo": "Modelo", "grupo": "Ambiente", "tipo": "texto", "padrao": "", "argumento": "--model",
+      "ajuda": "Vazio: pergunta ao servidor (/v1/models)." },
+    { "id": "quant", "rotulo": "Quantização", "grupo": "Ambiente", "tipo": "texto", "padrao": "Q4_K_M", "argumento": "--quant",
+      "sugestoes": ["F16", "Q8_0", "Q6_K", "Q5_K_M", "Q4_K_M", "Q3_K_M", "AWQ", "GPTQ", "NVFP4"],
+      "ajuda": "Registrada na procedência; não muda o servidor." },
+    { "id": "ctx", "rotulo": "Contexto", "grupo": "Ambiente", "tipo": "inteiro", "padrao": 2048, "min": 1, "argumento": "--ctx",
+      "ajuda": "O -c com que o servidor foi iniciado. Só registro." },
+    { "id": "imagem", "rotulo": "Digest da imagem Docker", "grupo": "Ambiente", "tipo": "texto", "padrao": "{imagem_digest}",
+      "argumento": "--image", "ajuda": "Preenchido sozinho quando o Docker está acessível daqui." },
+
+    { "id": "prompt", "rotulo": "Prompt", "grupo": "Carga", "tipo": "texto_longo", "argumento": "--prompt",
+      "padrao": "Explique em um paragrafo por que ler o modelo da memoria limita a velocidade de geracao de texto.",
+      "ajuda": "O mesmo texto em todas as máquinas. O sha256 vai para a procedência." },
+    { "id": "max_tokens", "rotulo": "Max tokens", "grupo": "Carga", "tipo": "inteiro", "padrao": 128, "min": 1, "max": 8192,
+      "argumento": "--max-tokens", "ajuda": "Tokens gerados por execução." },
+    { "id": "temperature", "rotulo": "Temperatura", "grupo": "Carga", "tipo": "real", "padrao": 0.0, "min": 0, "max": 2,
+      "argumento": "--temperature", "ajuda": "0 = determinístico." },
+    { "id": "seed", "rotulo": "Seed", "grupo": "Carga", "tipo": "inteiro", "padrao": 42, "argumento": "--seed" },
+
+    { "id": "runs", "rotulo": "Execuções", "grupo": "Repetições", "tipo": "inteiro", "padrao": 5, "min": 1, "max": 200,
+      "argumento": "--runs", "ajuda": "Medidas que entram no resumo. Mais execuções, desvio mais confiável." },
+    { "id": "warmup", "rotulo": "Aquecimento", "grupo": "Repetições", "tipo": "inteiro", "padrao": 1, "min": 0, "max": 20,
+      "argumento": "--warmup", "ajuda": "Execuções descartadas antes de medir." },
+
+    { "id": "notas", "rotulo": "Notas", "grupo": "Registro", "tipo": "texto", "padrao": "", "argumento": "--notes",
+      "ajuda": "Energia, temperatura, o que mais importar." }
+  ]
+}

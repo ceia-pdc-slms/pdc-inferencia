@@ -1,0 +1,25 @@
+name: Procedência das medições
+
+on:
+  pull_request:
+    paths:
+      - "runs/**"
+      - "maquinas/**"
+      - ".github/scripts/validar_runs.py"
+  push:
+    branches: [main]
+    paths:
+      - "runs/**"
+      - "maquinas/**"
+      - ".github/scripts/validar_runs.py"
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
+      - run: python .github/scripts/validar_runs.py

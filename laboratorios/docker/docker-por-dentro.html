@@ -1,0 +1,892 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Docker por Dentro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css">
+<script src="../../assets/tema.js" defer></script>
+<style>
+/* Layout: arquivo à esquerda (linhas clicáveis), pátio de containers à direita; a explicação acompanha a linha ativa. */
+/* Cores e fontes vêm de assets/tokens.css (tema do time). Os nomes antigos desta página viram apelidos:
+   sea = azul da marca (o que a linha atual mexe), rust = container modelo, teal = container bench, amber = imagem. */
+:root {
+  --sea: var(--c1); --sea-soft: var(--c1-soft);
+  --rust: var(--c2); --rust-soft: var(--c2-soft);
+  --teal: var(--c3); --teal-soft: var(--c3-soft);
+  --amber: var(--c4); --amber-soft: var(--c4-soft);
+  --display: var(--font-display); --body: var(--font-sans); --mono: var(--font-mono);
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+.eyebrow-of { font: 500 .74rem/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 8px 0 14px; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 48px; display: flex; flex-direction: column; gap: 20px; }
+header h1 { font-family: var(--display); font-weight: 700; font-size: clamp(2rem, 5vw, 3rem); line-height: 1; margin: 0 0 8px; letter-spacing: .01em; text-transform: uppercase; text-wrap: balance; }
+header p { margin: 0; color: var(--muted); max-width: 62ch; }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+.tab { font: 600 1.05rem var(--display); letter-spacing: .06em; text-transform: uppercase; padding: 8px 16px; border: 1.5px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 4px; cursor: pointer; }
+.tab[aria-selected="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.tab small { font: 400 .78rem var(--body); letter-spacing: 0; text-transform: none; display: block; opacity: .8; }
+button:focus-visible { outline: 2px solid var(--sea); outline-offset: 2px; }
+
+.grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 20px; align-items: start; }
+.col { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.col.sticky { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); }
+
+/* arquivo */
+.file { background: var(--code-bg); border-radius: 6px; overflow: hidden; }
+.file-name { font: 500 .78rem var(--mono); color: var(--code-dim); padding: 10px 14px 6px; }
+.code { overflow: auto; max-height: 68vh; padding: 4px 0 12px; }
+.code-inner { width: max-content; min-width: 100%; display: flex; flex-direction: column; }
+.ln { font: 400 .82rem/1.65 var(--mono); color: var(--code-fg); white-space: pre; text-align: left; background: none; border: 0; border-left: 3px solid transparent; padding: 0 16px 0 11px; margin: 0; display: block; width: 100%; }
+button.ln { cursor: pointer; }
+button.ln:hover { background: var(--code-hot); }
+.ln.cm { color: var(--code-dim); }
+.ln .k { color: var(--code-key); }
+.ln.active { background: var(--code-hot); border-left-color: var(--code-key); }
+.ln.done { color: var(--code-fg); }
+.ln.todo { opacity: .55; }
+.ln.active.todo { opacity: 1; }
+
+/* controles + explicação */
+.controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.btn { font: 500 .88rem var(--body); padding: 7px 14px; border-radius: 4px; border: 1.5px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; }
+.btn.primary { background: var(--sea); border-color: var(--sea); color: var(--bg); }
+.btn:disabled { opacity: .4; cursor: default; }
+.count { font: 500 .82rem var(--mono); color: var(--muted); margin-left: auto; font-variant-numeric: tabular-nums; }
+.explain { background: var(--surface); border: 1.5px solid var(--line); border-radius: 6px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+.now { display: flex; flex-direction: column; gap: 6px; }
+.now p { margin: 4px 0 0; max-width: 62ch; font-size: 1rem; }
+.now h2, .explain h2 { font: 700 1.5rem/1.1 var(--display); letter-spacing: .02em; margin: 0; text-wrap: balance; }
+.now .cmd, .explain .cmd { font: 500 .8rem var(--mono); color: var(--sea); overflow-wrap: anywhere; }
+.explain dl { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 14px; }
+.explain dt { font: 600 .72rem var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding-top: 3px; white-space: nowrap; }
+.explain dd { margin: 0; max-width: 62ch; }
+
+/* pátio */
+.scene { position: relative; background: var(--sunken); border: 1.5px solid var(--line); border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 34px; }
+.scene svg.wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.wires line { stroke: var(--sea); stroke-width: 3; stroke-dasharray: 6 6; animation: march .7s linear infinite; }
+.wires polygon { fill: var(--sea); }
+@keyframes march { to { stroke-dashoffset: -12; } }
+.packet { position: absolute; left: 0; top: 0; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: var(--sea); box-shadow: 0 0 0 4px var(--sea-soft); pointer-events: none; }
+.flabel { position: absolute; transform: translate(-50%, -50%); font: 600 .76rem var(--body); background: var(--sea); color: var(--bg); padding: 2px 7px; border-radius: 3px; white-space: nowrap; pointer-events: none; }
+.row { display: flex; flex-wrap: wrap; gap: 12px; }
+.row > * { flex: 1 1 150px; min-width: 0; }
+.zone-tag { font: 600 .8rem var(--display); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.host { border: 1.5px solid var(--line); border-radius: 6px; background: var(--bg); padding: 12px; display: flex; flex-direction: column; gap: 30px; }
+.host-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.el { transition: opacity .35s, background-color .35s, border-color .35s, box-shadow .35s; }
+.box { border: 1.5px dashed var(--line); border-radius: 5px; padding: 8px 10px; font-size: .84rem; line-height: 1.3; color: var(--faint); background: transparent; }
+.box b { display: block; font: 600 .98rem var(--display); letter-spacing: .05em; text-transform: uppercase; }
+.box span { font-size: .76rem; }
+.box.on { border-style: solid; background: var(--surface); color: var(--fg); }
+.box.on span { color: var(--muted); }
+.scene .box.hot { border-color: var(--sea); border-width: 2px; box-shadow: 0 0 0 4px var(--sea-soft); animation: pop .5s ease-out; }
+@keyframes pop { 0% { transform: scale(.94); } 60% { transform: scale(1.03); } 100% { transform: scale(1); } }
+
+.ctn { border: 2px dashed var(--line); border-radius: 5px; padding: 10px; display: flex; flex-direction: column; gap: 8px; color: var(--faint);
+  background-image: repeating-linear-gradient(90deg, transparent 0 10px, color-mix(in srgb, currentColor 7%, transparent) 10px 12px); }
+.ctn > b { font: 700 1.05rem var(--display); letter-spacing: .08em; text-transform: uppercase; }
+.ctn > b small { font: 400 .74rem var(--body); letter-spacing: 0; text-transform: none; display: block; }
+.ctn.on { border-style: solid; }
+.ctn.modelo.on { border-color: var(--rust); background-color: var(--rust-soft); color: var(--rust); }
+.ctn.bench.on { border-color: var(--teal); background-color: var(--teal-soft); color: var(--teal); }
+.ctn.image.on { border-color: var(--amber); background-color: var(--amber-soft); color: var(--amber); }
+.ctn.hot { box-shadow: 0 0 0 3px var(--sea-soft); }
+.chips { display: flex; flex-direction: column; gap: 6px; }
+.chip { font-size: .78rem; line-height: 1.3; padding: 5px 8px; border-radius: 4px; border: 1px dashed var(--line); color: var(--faint); opacity: .55; }
+.chip code { font: 500 .74rem var(--mono); overflow-wrap: anywhere; }
+.chip.on { opacity: 1; border-style: solid; background: var(--surface); color: var(--fg); }
+.scene .chip.hot { border-color: var(--sea); border-width: 2px; box-shadow: 0 0 0 4px var(--sea-soft); animation: pop .5s ease-out; font-weight: 500; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--faint); margin-right: 5px; }
+.chip.on .dot { background: var(--teal); animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--teal) 25%, transparent); } }
+.diff { background: var(--surface); border: 1.5px solid var(--line); border-radius: 6px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.diff summary { cursor: pointer; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; list-style: none; }
+.diff summary::-webkit-details-marker { display: none; }
+.diff summary span { font-size: .8rem; color: var(--sea); text-decoration: underline; }
+.diff:not([open]) { gap: 0; }
+.diff[open] summary { margin-bottom: 12px; }
+.diff[open] > *:not(summary) { margin-bottom: 12px; }
+.diff h2 { font: 700 1.35rem/1.1 var(--display); letter-spacing: .04em; text-transform: uppercase; margin: 0; }
+.diff p { margin: 0; max-width: 70ch; }
+.diff-scroll { overflow-x: auto; }
+.diff table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: .9rem; }
+.diff th, .diff td { text-align: left; vertical-align: top; padding: 8px 12px 8px 0; border-top: 1px solid var(--line); }
+.diff thead th { border-top: 0; font: 700 1.05rem var(--display); letter-spacing: .06em; text-transform: uppercase; }
+.diff thead th.a { color: var(--amber); } .diff thead th.b { color: var(--rust); }
+.diff tbody th { font: 600 .72rem var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; width: 1%; padding-top: 11px; }
+.diff code, .role code { font: 500 .82em var(--mono); }
+.chain { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: .86rem; }
+.chain b { font: 600 .95rem var(--display); letter-spacing: .05em; text-transform: uppercase; padding: 4px 10px; border-radius: 4px; border: 1.5px solid var(--line); background: var(--sunken); }
+.chain b.a { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+.chain b.b { border-color: var(--rust); background: var(--rust-soft); color: var(--rust); }
+.chain i { font-style: normal; color: var(--muted); font-family: var(--mono); font-size: .76rem; }
+.role { margin: 0; padding: 10px 14px; border-radius: 6px; background: var(--sea-soft); color: var(--fg); font-size: .9rem; }
+.role b { font-weight: 600; }
+.jump { align-self: flex-start; }
+.part { font: 600 .72rem var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--sea); }
+.gl { display: flex; flex-direction: column; gap: 4px; border-top: 1px solid var(--line); padding-top: 10px; font-size: .84rem; color: var(--muted); }
+.gl span b { color: var(--fg); font-weight: 600; }
+.gl > b { font: 600 .72rem var(--body); letter-spacing: .08em; text-transform: uppercase; }
+.scene .box:not(.on), .scene .chip:not(.on) { display: none; }
+.scene .box.on, .scene .chip.on { animation: appear .45s ease-out; }
+@keyframes appear { from { opacity: 0; transform: translateY(8px) scale(.96); } }
+.scene.focus .box.on:not(.hot):not(.end), .scene.focus .chip.on:not(.hot):not(.end) { opacity: .45; }
+.scene .row:not(:has(.on)):not(:has(.ctn)) { display: none; }
+.ctn:not(.on) .chips { display: none; }
+.guia { display: flex; flex-direction: column; gap: 28px; }
+.g-sec { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.g-sec h2 { font: 700 1.5rem/1.1 var(--display); letter-spacing: .02em; margin: 0; text-wrap: balance; }
+.g-sec p { margin: 0; max-width: 70ch; }
+.g-sec code, .g-table code { font: 500 .84em var(--mono); overflow-wrap: anywhere; }
+.g-table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: .9rem; }
+.g-table th, .g-table td { text-align: left; vertical-align: top; padding: 8px 14px 8px 0; border-top: 1px solid var(--line); }
+.g-table thead th { border-top: 0; font: 600 .72rem var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.snippet .file-name { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 10px 8px 14px; border-bottom: 1px solid var(--code-hot); }
+.snippet pre { margin: 0; padding: 14px; overflow-x: auto; font: 400 .82rem/1.6 var(--mono); color: var(--code-fg); }
+.snippet pre.wraptext { white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--body); font-size: .9rem; }
+.copy { font: 600 .76rem var(--body); padding: 4px 12px; border-radius: 4px; border: 1px solid var(--code-dim); background: transparent; color: var(--code-fg); cursor: pointer; white-space: nowrap; }
+.copy:hover { background: var(--code-hot); }
+.copy.ok { border-color: var(--code-key); color: var(--code-key); }
+.cmds { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 10px; }
+.cmd-card { background: var(--surface); border: 1.5px solid var(--line); border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.cmd-card span { font-size: .88rem; }
+.cmd-card .line { display: flex; gap: 8px; align-items: center; background: var(--code-bg); border-radius: 4px; padding: 6px 6px 6px 10px; min-width: 0; }
+.cmd-card code { flex: 1 1 auto; min-width: 0; overflow-x: auto; white-space: nowrap; font: 500 .8rem var(--mono); color: var(--code-fg); }
+.legend { font-size: .8rem; color: var(--muted); margin: 0; }
+
+@media (max-width: 860px) {
+  .col.sticky { position: static; }
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .code { max-height: 34vh; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wires line, .chip.on .dot, .scene .box.on, .scene .chip.on, .scene .box.hot, .scene .chip.hot { animation: none; }
+  .packet { display: none; }
+}
+</style>
+</head>
+<body>
+<header class="appbar"><div class="appbar-in">
+  <a class="marca" href="../../index.html" aria-label="Início">
+    <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" style="fill:var(--accent)"/><g fill="#fff"><rect x="6.5" y="7" width="3.6" height="18" rx="1.3"/><rect x="12" y="10.5" width="3.6" height="14.5" rx="1.3"/><rect x="17.5" y="14" width="3.6" height="11" rx="1.3"/><rect x="23" y="17.5" width="3.6" height="7.5" rx="1.3"/></g></svg>
+    <span><b>Compressão &amp; Testbench</b><small>PDC · SLMs</small></span>
+  </a>
+  <nav class="appnav">
+    <a href="../../index.html" aria-current="page">Laboratórios</a>
+    <a href="../../testbench/index.html">Testbench</a>
+    <button class="tema-btn" data-tema-alternar aria-label="Alternar tema claro/escuro"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg></button>
+  </nav>
+</div></header>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow-of">Oficina · semana 2 · Beatriz</p>
+    <h1>Docker por Dentro</h1>
+    <p>Clique numa linha do arquivo, ou aperte Reproduzir, e veja o que ela faz no seu computador. Os arquivos são os da oficina.</p>
+  </header>
+
+  <details class="diff" open>
+    <summary><h2 id="diff-h">Dockerfile ou compose.yaml?</h2><span>abrir ou fechar</span></summary>
+    <p>São dois arquivos com trabalhos diferentes. O Dockerfile monta <b>uma imagem</b>. O compose.yaml não monta nada: ele diz <b>quais containers ligar e como conectá-los</b>, e pode apontar para um Dockerfile.</p>
+    <div class="diff-scroll"><table>
+      <thead><tr><th></th><th class="a">Dockerfile</th><th class="b">compose.yaml</th></tr></thead>
+      <tbody>
+        <tr><th>Pergunta</th><td>O que vai dentro do pacote?</td><td>Quem roda, e ligado a quê?</td></tr>
+        <tr><th>Descreve</th><td>Uma imagem só: sistema, arquivos e o comando de partida.</td><td>Vários containers: imagem de cada um, portas, pastas, ordem de partida.</td></tr>
+        <tr><th>Comparação</th><td>A receita de um prato.</td><td>O pedido da mesa: quais pratos, e o que vai junto.</td></tr>
+        <tr><th>Quem lê</th><td><code>docker build</code></td><td><code>docker compose up</code> e <code>docker compose run</code></td></tr>
+        <tr><th>Na oficina</th><td>Monta a imagem do <b>bench</b> (Python + bench.py).</td><td>Liga o <b>modelo</b> (imagem pronta, baixada) e o <b>bench</b> (imagem do nosso Dockerfile).</td></tr>
+      </tbody>
+    </table></div>
+    <div class="chain" aria-label="Como os dois se encaixam">
+      <b class="a">Dockerfile</b><i>build →</i><b>imagem</b><i>→ usada por</i><b class="b">compose.yaml</b><i>up / run →</i><b>containers ligados</b>
+    </div>
+  </details>
+
+  <div class="tabs" role="tablist" aria-label="Arquivo">
+    <button class="tab" role="tab" id="tab-dockerfile" data-tab="dockerfile">Dockerfile<small>a receita de uma imagem</small></button>
+    <button class="tab" role="tab" id="tab-compose" data-tab="compose">compose.yaml<small>quais containers rodam e como se ligam</small></button>
+    <button class="tab" role="tab" id="tab-comandos" data-tab="comandos">Comandos<small>o que você digita no terminal</small></button>
+    <button class="tab" role="tab" id="tab-guia" data-tab="guia">Faça o seu<small>modelos, comandos e um prompt para copiar</small></button>
+  </div>
+
+  <div class="grid">
+    <div class="col sticky">
+      <div class="file">
+        <div class="file-name" id="fname"></div>
+        <div class="code"><div class="code-inner" id="code"></div></div>
+      </div>
+    </div>
+
+    <div class="col">
+      <p class="role" id="role"></p>
+      <div class="controls">
+        <button class="btn" id="prev">Anterior</button>
+        <button class="btn primary" id="play">Reproduzir</button>
+        <button class="btn" id="next">Próxima</button>
+        <span class="count" id="count"></span>
+      </div>
+
+      <div class="now" aria-live="polite">
+        <div class="part" id="ex-part"></div>
+        <h2 id="ex-title"></h2>
+        <div class="cmd" id="ex-cmd"></div>
+        <p id="ex-what"></p>
+      </div>
+      <!-- cena: construir a imagem -->
+      <div class="scene" id="scene-build" hidden>
+        <div class="row">
+          <div class="box el" data-el="hub"><b>Docker Hub</b><span>depósito público de imagens prontas</span></div>
+          <div class="box el" data-el="pasta"><b>Sua pasta</b><span>Dockerfile e bench.py</span></div>
+        </div>
+        <div class="host">
+          <div class="host-head"><span class="zone-tag">Seu computador</span></div>
+          <div class="row">
+            <div class="ctn image el" data-el="img">
+              <b>Imagem<small>o pacote sendo montado, uma camada por linha</small></b>
+              <div class="chips">
+                <div class="chip el" data-el="l1"><b>Camada 1.</b> Linux mínimo com Python 3.12</div>
+                <div class="chip el" data-el="l2"><b>Camada 2.</b> o arquivo <code>/app/bench.py</code></div>
+                <div class="chip el" data-el="c1"><b>Ajuste.</b> pasta de trabalho: <code>/resultados</code></div>
+                <div class="chip el" data-el="c2"><b>Ajuste.</b> ao ligar, rodar <code>python /app/bench.py</code></div>
+                <div class="chip el" data-el="seal"><b>Identidade.</b> <code>sha256:9f2c…</code> (o digest)</div>
+              </div>
+            </div>
+            <div class="ctn bench el" data-el="run">
+              <b>Container<small>a imagem ligada, rodando</small></b>
+              <div class="chips">
+                <div class="chip el" data-el="proc"><span class="dot"></span>processo <code>python /app/bench.py</code></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <svg class="wires" aria-hidden="true"></svg>
+      </div>
+
+      <!-- cena: rodar os containers -->
+      <div class="scene" id="scene-run" hidden>
+        <div class="row">
+          <div class="box el" data-el="you"><b>Você</b><span>terminal ou navegador</span></div>
+          <div class="box el" data-el="registry"><b>Registry</b><span>depósito de imagens (GHCR)</span></div>
+          <div class="box el" data-el="hf"><b>Hugging Face</b><span>depósito de modelos</span></div>
+          <div class="box el" data-el="var"><b>IMAGE_DIGEST</b><span>variável no seu terminal</span></div>
+        </div>
+        <div class="host">
+          <div class="host-head">
+            <div class="box el" data-el="hport" style="flex:0 1 auto"><b>Porta 8080</b><span>localhost:8080</span></div>
+            <span class="zone-tag">Seu computador</span>
+          </div>
+          <div class="row">
+            <div class="ctn modelo el" data-el="modelo">
+              <b>Container: modelo<small>serve o modelo de linguagem</small></b>
+              <div class="chips">
+                <div class="chip el" data-el="prog">programa <code>llama.cpp server</code></div>
+                <div class="chip el" data-el="env">aviso ao programa: guarde downloads em <code>/models</code></div>
+                <div class="chip el" data-el="weights">arquivo do modelo: Qwen 0.5B, uns 400 MB</div>
+                <div class="chip el" data-el="cport">atende na porta <code>8080</code> do container</div>
+                <div class="chip el" data-el="ctx">lê até <code>2048</code> tokens de uma vez</div>
+                <div class="chip el" data-el="health"><span class="dot"></span>saudável: já pode responder</div>
+              </div>
+            </div>
+            <div class="ctn bench el" data-el="bench">
+              <b>Container: bench<small>faz perguntas e cronometra</small></b>
+              <div class="chips">
+                <div class="chip el" data-el="bimg">imagem feita do nosso Dockerfile</div>
+                <div class="chip el" data-el="profile">só liga quando alguém chama</div>
+                <div class="chip el" data-el="wait">espera o modelo ficar saudável</div>
+                <div class="chip el" data-el="digest">recebe <code>IMAGE_DIGEST</code></div>
+                <div class="chip el" data-el="url">fala com <code>http://modelo:8080</code></div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="box el" data-el="vol"><b>Volume modelos</b><span>disco que o Docker guarda fora do container</span></div>
+            <div class="box el" data-el="dockerfile"><b>Dockerfile</b><span>a receita do container bench</span></div>
+            <div class="box el" data-el="res"><b>Pasta resultados/</b><span>onde ficam os JSON das medições</span></div>
+          </div>
+        </div>
+        <svg class="wires" aria-hidden="true"></svg>
+      </div>
+
+      <div class="explain">
+        <dl>
+          <dt id="ex-why-l">Para que serve</dt><dd id="ex-why"></dd>
+          <dt id="ex-sem-l">Sem esta linha</dt><dd id="ex-sem"></dd>
+        </dl>
+        <div class="gl" id="ex-gl"></div>
+        <button class="btn jump" id="jump" hidden></button>
+      </div>
+
+      <p class="legend">As peças aparecem conforme as linhas são lidas. Contorno azul: o que a linha atual cria ou mexe. Seta azul: o que passa de um lugar para outro.</p>
+    </div>
+  </div>
+  <div class="guia" id="guia" hidden>
+    <p class="role"><b>Você está no guia.</b> Aqui não há animação: são modelos prontos para copiar, adaptar ao seu projeto e colar. Troque o que estiver em MAIÚSCULAS.</p>
+
+    <section class="g-sec">
+      <h2>1. Antes de escrever, responda a seis perguntas</h2>
+      <p>Cada resposta vira uma linha do Dockerfile. Se você sabe rodar o programa no seu computador, já sabe as respostas.</p>
+      <div class="diff-scroll"><table class="g-table">
+        <thead><tr><th>Pergunta</th><th>Exemplo de resposta</th><th>Vira a linha</th></tr></thead>
+        <tbody>
+          <tr><td>Em que linguagem e versão o programa roda?</td><td>Python 3.12</td><td><code>FROM python:3.12-slim</code></td></tr>
+          <tr><td>O que precisa ser instalado antes?</td><td>As bibliotecas do requirements.txt</td><td><code>RUN pip install -r requirements.txt</code></td></tr>
+          <tr><td>Que arquivos o programa usa?</td><td>O código da pasta do projeto</td><td><code>COPY . .</code></td></tr>
+          <tr><td>Em que pasta ele trabalha?</td><td>/app</td><td><code>WORKDIR /app</code></td></tr>
+          <tr><td>Ele atende em alguma porta?</td><td>Sim, na 8000</td><td><code>EXPOSE 8000</code></td></tr>
+          <tr><td>Que comando liga o programa?</td><td>python main.py</td><td><code>CMD ["python", "main.py"]</code></td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section class="g-sec">
+      <h2>2. Dockerfile modelo</h2>
+      <p>Salve com o nome <code>Dockerfile</code>, sem extensão, na pasta do projeto. O exemplo é em Python; para outra linguagem mudam a imagem base e o comando de instalar.</p>
+      <div class="file snippet">
+        <div class="file-name"><span>Dockerfile</span><button class="copy" type="button" data-copy="g-dockerfile">Copiar</button></div>
+        <pre id="g-dockerfile"># 1. De onde parto: uma imagem que já traz a linguagem instalada
+FROM python:3.12-slim
+
+# 2. Pasta de trabalho dentro do container
+WORKDIR /app
+
+# 3. Dependências primeiro: se elas não mudarem, o Docker reaproveita esta etapa
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 4. O resto do código
+COPY . .
+
+# 5. Porta em que o programa atende (apague se ele não for um servidor)
+EXPOSE 8000
+
+# 6. O que roda quando o container liga
+CMD ["python", "main.py"]</pre>
+      </div>
+      <div class="diff-scroll"><table class="g-table">
+        <thead><tr><th>Linguagem</th><th>Imagem base</th><th>Instalar dependências</th><th>Ligar</th></tr></thead>
+        <tbody>
+          <tr><td>Python</td><td><code>python:3.12-slim</code></td><td><code>pip install -r requirements.txt</code></td><td><code>["python", "main.py"]</code></td></tr>
+          <tr><td>Node.js</td><td><code>node:22-slim</code></td><td><code>npm ci</code> (copie antes o package.json e o package-lock.json)</td><td><code>["node", "index.js"]</code></td></tr>
+          <tr><td>Outra</td><td colspan="3">Procure a imagem oficial da linguagem no Docker Hub e escolha uma etiqueta com número de versão, nunca <code>latest</code>.</td></tr>
+        </tbody>
+      </table></div>
+      <p>Crie também um arquivo <code>.dockerignore</code> ao lado. Ele lista o que <b>não</b> deve entrar na imagem: deixa o pacote menor e evita copiar senhas.</p>
+      <div class="file snippet">
+        <div class="file-name"><span>.dockerignore</span><button class="copy" type="button" data-copy="g-ignore">Copiar</button></div>
+        <pre id="g-ignore">.git
+.env
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+resultados/</pre>
+      </div>
+    </section>
+
+    <section class="g-sec">
+      <h2>3. compose.yaml modelo</h2>
+      <p>Você só precisa dele em dois casos: quando há <b>mais de um container</b> trabalhando junto, ou quando o comando <code>docker run</code> ficou comprido demais para digitar toda vez. O modelo traz um programa seu e um banco de dados; apague o que não usar.</p>
+      <div class="file snippet">
+        <div class="file-name"><span>compose.yaml</span><button class="copy" type="button" data-copy="g-compose">Copiar</button></div>
+        <pre id="g-compose">services:
+  app:                          # nome do seu container; os outros o encontram por este nome
+    build: .                    # monta a imagem com o Dockerfile desta pasta
+    ports:
+      - "8000:8000"             # porta do computador : porta do container
+    environment:
+      MINHA_VARIAVEL: valor     # recados para o programa
+    volumes:
+      - ./dados:/app/dados      # pasta do computador : pasta do container
+    depends_on:
+      - banco                   # liga o banco antes (apague se não houver)
+
+  banco:                        # segundo container, com imagem pronta
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: TROQUE-ESTA-SENHA
+    volumes:
+      - banco_dados:/var/lib/postgresql/data   # disco que não se apaga
+
+volumes:
+  banco_dados:</pre>
+      </div>
+    </section>
+
+    <section class="g-sec">
+      <h2>4. Comandos para copiar</h2>
+      <p>Rode todos dentro da pasta do projeto. Troque MEU-APP pelo nome que quiser dar.</p>
+      <div class="cmds" id="g-cmds"></div>
+    </section>
+
+    <section class="g-sec">
+      <h2>5. Prompt para pedir a um agente</h2>
+      <p>Abra o agente de IA na pasta do projeto, preencha os colchetes e cole. O que você não souber, apague: o prompt manda o agente descobrir no código ou perguntar.</p>
+      <div class="file snippet">
+        <div class="file-name"><span>prompt</span><button class="copy" type="button" data-copy="g-prompt">Copiar</button></div>
+        <pre id="g-prompt" class="wraptext">Quero rodar este projeto em Docker. Sou iniciante em Docker, então explique em linguagem simples.
+
+O que eu sei sobre o projeto:
+- O que ele faz: [descreva em uma frase]
+- Como eu rodo hoje no meu computador: [comando, por exemplo "python main.py"]
+- Porta em que ele atende, se for um servidor: [número ou "não sei"]
+- Dados que não podem se perder quando o container for apagado: [pastas ou arquivos, ou "nenhum"]
+- Outros serviços de que ele depende: [banco de dados, outro programa, ou "nenhum"]
+- Meu sistema: [Windows, macOS ou Linux]
+
+O que eu preciso que você faça:
+1. Leia o projeto antes de escrever qualquer coisa: descubra a linguagem, a versão, as dependências e o comando de partida. Se algo importante não estiver claro, me pergunte em vez de supor.
+2. Escreva um Dockerfile. Use uma imagem base oficial com versão fixa (nunca "latest"), instale as dependências antes de copiar o código e coloque um comentário curto em cada linha dizendo para que ela serve.
+3. Escreva um .dockerignore que deixe de fora o controle de versão, ambientes virtuais, caches e qualquer arquivo com senha ou chave.
+4. Só crie um compose.yaml se houver mais de um container ou se o comando para rodar ficar comprido. Se criar, comente cada bloco e use volumes para os dados que eu disse que não podem se perder.
+5. Não escreva senhas nem chaves dentro dos arquivos. Use variáveis de ambiente e me diga quais eu preciso definir.
+6. Construa a imagem e rode o container para confirmar que funciona. Se não puder executar comandos, diga isso claramente e não afirme que funcionou.
+7. No fim, me entregue: a lista dos arquivos criados, os comandos exatos para construir, rodar, ver os registros e parar (prontos para copiar, no formato do meu sistema), como eu confirmo que deu certo, e o que você não conseguiu verificar.
+
+Não mude o código do projeto sem me avisar antes.</pre>
+      </div>
+    </section>
+
+    <section class="g-sec">
+      <h2>6. Quando dá erro</h2>
+      <div class="diff-scroll"><table class="g-table">
+        <thead><tr><th>O que aparece</th><th>O que quer dizer</th><th>O que fazer</th></tr></thead>
+        <tbody>
+          <tr><td><code>Cannot connect to the Docker daemon</code> ou <code>error during connect</code></td><td>O Docker não está ligado.</td><td>Abra o Docker Desktop e espere ele terminar de iniciar.</td></tr>
+          <tr><td><code>port is already allocated</code></td><td>Outro programa já usa essa porta do computador.</td><td>Troque o número da esquerda em <code>ports</code>, por exemplo <code>"8001:8000"</code>.</td></tr>
+          <tr><td><code>COPY failed</code> ou <code>not found</code> durante o build</td><td>O arquivo não está na pasta, ou está no .dockerignore.</td><td>Confira o nome e rode o comando dentro da pasta do projeto.</td></tr>
+          <tr><td>O container liga e desliga logo em seguida</td><td>O programa terminou ou deu erro ao iniciar.</td><td>Leia a mensagem com <code>docker logs</code>.</td></tr>
+          <tr><td>Uma variável chega vazia no container</td><td>Ela foi criada em outro terminal.</td><td>Defina a variável e rode o comando no mesmo terminal.</td></tr>
+          <tr><td>Mudei o código e nada mudou</td><td>O container ainda usa a imagem antiga.</td><td>Construa de novo: <code>docker compose up --build</code>.</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+  </div>
+</div>
+
+<script>
+const TABS = {
+  dockerfile: {
+    scene: 'build', file: 'Dockerfile',
+    lines: [
+      ['# Imagem da bancada de medicao: so Python + bench.py.', null],
+      ['FROM python:3.12-slim', 0],
+      ['', null],
+      ['COPY bench.py /app/bench.py', 1],
+      ['', null],
+      ['# Os JSON de resultado sao gravados aqui.', null],
+      ['WORKDIR /resultados', 2],
+      ['', null],
+      ['ENTRYPOINT ["python", "/app/bench.py"]', 3],
+    ],
+    steps: [
+      { t: 'FROM: de onde parto', cmd: 'FROM python:3.12-slim',
+        what: 'Baixa do Docker Hub uma imagem pronta: um Linux bem pequeno que já vem com o Python 3.12 instalado. Ela vira a primeira camada da nossa imagem.',
+        why: 'Ninguém precisa instalar Python. E todo mundo que construir a imagem parte exatamente do mesmo sistema e da mesma versão.',
+        on: ['hub', 'img', 'l1'], hot: ['l1'], flows: [['hub', 'l1', 'python:3.12-slim']] },
+      { t: 'COPY: o que entra', cmd: 'COPY bench.py /app/bench.py',
+        what: 'Copia o arquivo bench.py da sua pasta para dentro da imagem, no caminho /app/bench.py. Isso cria a segunda camada.',
+        why: 'O container é isolado e não enxerga os seus arquivos. O que o programa precisa tem de ser colocado dentro.',
+        on: ['pasta', 'l2'], hot: ['l2'], flows: [['pasta', 'l2', 'bench.py']] },
+      { t: 'WORKDIR: onde trabalho', cmd: 'WORKDIR /resultados',
+        what: 'Define /resultados como a pasta em que o programa vai estar quando ligar. É onde o bench.py grava os arquivos de resultado.',
+        why: 'Depois, no compose, essa pasta é ligada a uma pasta do seu computador. Assim os resultados não somem com o container.',
+        on: ['c1'], hot: ['c1'], flows: [] },
+      { t: 'ENTRYPOINT: o que roda', cmd: 'ENTRYPOINT ["python", "/app/bench.py"]',
+        what: 'Anota qual comando o container executa ao ser ligado. Nada roda agora, fica só registrado na imagem.',
+        why: 'Quem usa a imagem não precisa saber como chamar o programa. Liga o container e ele já sai medindo.',
+        on: ['c2'], hot: ['c2'], flows: [] },
+      { t: 'docker build: a imagem fica pronta', cmd: 'docker build -t bench .',
+        what: 'O Docker lê as quatro linhas em ordem, fecha a imagem e calcula o digest: um código sha256 que funciona como impressão digital.',
+        why: 'Se qualquer coisa dentro da imagem mudar, o digest muda. Dois digests iguais garantem o mesmo ambiente em duas máquinas.',
+        on: ['seal'], hot: ['seal', 'img'], flows: [] },
+      { t: 'docker run: a imagem vira container', cmd: 'docker run bench',
+        what: 'O Docker cria um container a partir da imagem e executa o comando do ENTRYPOINT. A imagem não é alterada.',
+        why: 'A imagem é o molde, o container é a peça. Dá para criar e destruir quantos containers quiser, todos idênticos.',
+        on: ['run', 'proc'], hot: ['run', 'proc'], flows: [['img', 'run', 'cria']], jump: ['compose', 'Ver quem liga este container: compose.yaml'] },
+    ],
+  },
+
+  compose: {
+    scene: 'run', file: 'compose.yaml',
+    lines: [
+      ['services:', 0],
+      ['  modelo:', 1],
+      ['    # llama.cpp server: API compativel com OpenAI.', null],
+      ['    image: ghcr.io/ggml-org/llama.cpp:server', 2],
+      ['    environment:', 3],
+      ['      LLAMA_CACHE: /models', 3],
+      ['    command:', 4],
+      ['      - "-hf"', 4],
+      ['      - "Qwen/Qwen2.5-0.5B-Instruct-GGUF:Q4_K_M"', 4],
+      ['      - "--host"', 5],
+      ['      - "0.0.0.0"', 5],
+      ['      - "--port"', 5],
+      ['      - "8080"', 5],
+      ['      - "-c"', 5],
+      ['      - "2048"', 5],
+      ['    ports:', 6],
+      ['      - "8080:8080"', 6],
+      ['    volumes:', 7],
+      ['      - modelos:/models', 7],
+      ['    healthcheck:', 8],
+      ['      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]', 8],
+      ['      interval: 5s', 8],
+      ['      timeout: 3s', 8],
+      ['      retries: 120', 8],
+      ['', null],
+      ['  bench:', 9],
+      ['    build: .', 10],
+      ['    profiles: ["bench"]', 11],
+      ['    depends_on:', 12],
+      ['      modelo:', 12],
+      ['        condition: service_healthy', 12],
+      ['    environment:', 13],
+      ['      IMAGE_DIGEST: ${IMAGE_DIGEST:-}', 13],
+      ['    entrypoint: ["python", "/app/bench.py", "--url", "http://modelo:8080", "--quant", "Q4_K_M", "--ctx", "2048"]', 14],
+      ['    volumes:', 15],
+      ['      - ./resultados:/resultados', 15],
+      ['', null],
+      ['volumes:', 7],
+      ['  modelos:', 7],
+    ],
+    steps: [
+      { part: 'Visão geral', t: 'Este arquivo liga dois containers', cmd: 'services:',
+        what: 'A palavra services abre uma lista, e cada item dela é um container. Aqui são dois: um roda o modelo, o outro mede.',
+        why: 'Você descreve tudo uma vez, e o Docker monta do mesmo jeito em qualquer máquina.',
+        gl: [['container', 'uma caixa fechada onde um programa roda, com tudo de que ele precisa']],
+        on: [], hot: ['modelo', 'bench'], flows: [] },
+
+      { part: 'Parte 1 de 2: o container do modelo', t: 'O primeiro container se chama modelo', cmd: 'modelo:',
+        what: 'É só um nome, mas ele tem uma função: o outro container usa esse nome como endereço para achar este.',
+        sem: 'O bench não saberia para onde mandar as perguntas.',
+        on: ['modelo'], hot: ['modelo'], flows: [] },
+      { part: 'Parte 1 de 2: o container do modelo', t: 'Baixar o programa pronto', cmd: 'image: ghcr.io/ggml-org/llama.cpp:server',
+        what: 'Baixa da internet um pacote que já traz o llama.cpp instalado. O llama.cpp é o programa que faz o modelo funcionar.',
+        why: 'Ninguém instala nada à mão, e as duas máquinas usam exatamente o mesmo programa.',
+        gl: [['imagem', 'pacote fechado com um programa e tudo de que ele precisa'], ['registry', 'site que guarda imagens; aqui é o GHCR']],
+        on: ['registry', 'prog'], hot: ['prog'], flows: [['registry', 'prog', 'baixa a imagem']] },
+      { part: 'Parte 1 de 2: o container do modelo', t: 'Dizer onde guardar os downloads', cmd: 'environment: LLAMA_CACHE: /models',
+        what: 'Deixa um recado para o programa: o que você baixar, guarde na pasta /models.',
+        why: 'Mais abaixo essa pasta é ligada a um disco que não se apaga.',
+        gl: [['variável de ambiente', 'um recado com nome e valor que o programa lê quando liga']],
+        on: ['env'], hot: ['env'], flows: [] },
+      { part: 'Parte 1 de 2: o container do modelo', t: 'Escolher qual modelo carregar', cmd: 'command: -hf Qwen/Qwen2.5-0.5B-Instruct-GGUF:Q4_K_M',
+        what: 'Manda o programa baixar do site Hugging Face o modelo Qwen 2.5 pequeno, um arquivo de uns 400 MB.',
+        why: 'É leve o bastante para rodar em notebook comum. Para testar outro modelo, basta trocar esta linha.',
+        gl: [['command', 'palavras extras entregues ao programa quando ele liga'], ['Q4_K_M', 'o nome da versão compactada do modelo']],
+        on: ['hf', 'weights'], hot: ['weights'], flows: [['hf', 'weights', 'baixa o modelo']] },
+      { part: 'Parte 1 de 2: o container do modelo', t: 'Ajustar como o programa atende', cmd: 'command: --host 0.0.0.0 --port 8080 -c 2048',
+        what: 'São três ajustes: aceitar pedidos vindos de fora do container, atender na porta 8080 e ler até 2048 tokens por vez.',
+        sem: 'O programa só ouviria a si mesmo, e ninguém conseguiria fazer perguntas.',
+        gl: [['porta', 'número que identifica um serviço dentro de uma máquina, como o ramal de um telefone'], ['token', 'um pedaço de palavra']],
+        on: ['cport', 'ctx'], hot: ['cport', 'ctx'], flows: [] },
+      { part: 'Parte 1 de 2: o container do modelo', t: 'Abrir uma porta para o seu computador', cmd: 'ports: "8080:8080"',
+        what: 'O container é fechado. Esta linha abre uma passagem: o que chegar na porta 8080 do seu computador é entregue na porta 8080 do container.',
+        why: 'Você abre localhost:8080 no navegador e conversa com o modelo.',
+        sem: 'O modelo funcionaria, mas só outro container conseguiria falar com ele.',
+        on: ['hport', 'you'], hot: ['hport'], flows: [['you', 'hport', 'sua pergunta'], ['hport', 'cport', 'entra no container']] },
+      { part: 'Parte 1 de 2: o container do modelo', t: 'Guardar o modelo num disco que não se apaga', cmd: 'volumes: modelos:/models',
+        what: 'Liga a pasta /models do container a um volume. As duas linhas no fim do arquivo, também destacadas, criam esse volume.',
+        sem: 'Cada vez que o container fosse recriado, os 400 MB seriam baixados de novo.',
+        gl: [['volume', 'um disco que o Docker guarda fora do container; continua existindo quando o container é apagado']],
+        on: ['vol'], hot: ['vol'], flows: [['weights', 'vol', 'o arquivo mora aqui']] },
+      { part: 'Parte 1 de 2: o container do modelo', t: 'Avisar quando o modelo estiver pronto', cmd: 'healthcheck: curl -f http://localhost:8080/health',
+        what: 'A cada 5 segundos o Docker pergunta ao programa se ele já está pronto. Quando a resposta é sim, o container ganha o selo de saudável.',
+        why: 'Carregar o modelo demora, ainda mais na primeira vez. O selo evita medir antes da hora.',
+        on: ['health'], hot: ['health'], flows: [] },
+
+      { part: 'Parte 2 de 2: o container do bench', t: 'O segundo container se chama bench', cmd: 'bench:',
+        what: 'Começa a descrição do container que faz as medições.',
+        why: 'Um container serve, o outro mede. Dá para trocar o modelo sem mexer na medição, e o contrário também.',
+        on: ['bench'], hot: ['bench'], flows: [] },
+      { part: 'Parte 2 de 2: o container do bench', t: 'Montar a imagem com o nosso Dockerfile', cmd: 'build: .',
+        what: 'O modelo usou uma imagem pronta, baixada. Este container não tem imagem pronta: o Docker monta uma seguindo o Dockerfile desta pasta. O ponto quer dizer nesta pasta.',
+        why: 'É aqui que os dois arquivos se encontram. O compose só aponta para o Dockerfile; quem diz o que vai dentro da imagem é ele.',
+        on: ['dockerfile', 'bimg'], hot: ['bimg'], flows: [['dockerfile', 'bimg', 'monta a imagem']], jump: ['dockerfile', 'Ver o Dockerfile linha por linha'] },
+      { part: 'Parte 2 de 2: o container do bench', t: 'Só ligar quando for chamado', cmd: 'profiles: ["bench"]',
+        what: 'Marca este container como opcional. O comando que sobe o modelo não liga o bench junto.',
+        why: 'O modelo fica ligado o tempo todo. A medição só acontece quando você pede.',
+        on: ['profile'], hot: ['profile'], flows: [] },
+      { part: 'Parte 2 de 2: o container do bench', t: 'Esperar o modelo ficar pronto', cmd: 'depends_on: modelo: condition: service_healthy',
+        what: 'O bench só começa depois que o container modelo tiver o selo de saudável.',
+        sem: 'O bench começaria cedo demais e daria erro, porque ainda não haveria ninguém para responder.',
+        on: ['wait'], hot: ['wait', 'health'], flows: [['health', 'wait', 'pode começar']] },
+      { part: 'Parte 2 de 2: o container do bench', t: 'Levar a identidade da imagem para dentro', cmd: 'environment: IMAGE_DIGEST: ${IMAGE_DIGEST:-}',
+        what: 'Pega o valor que você guardou no terminal, na variável IMAGE_DIGEST, e entrega ao bench. O bench escreve esse valor no resultado.',
+        why: 'É a prova de qual imagem do modelo estava rodando quando o número foi medido.',
+        sem: 'O campo sai vazio no resultado. O mesmo acontece se a variável foi criada em outro terminal.',
+        gl: [['digest', 'a impressão digital da imagem: um código que muda se qualquer coisa nela mudar']],
+        on: ['var', 'digest'], hot: ['digest'], flows: [['var', 'digest', 'sha256:…']] },
+      { part: 'Parte 2 de 2: o container do bench', t: 'Fazer as perguntas ao modelo', cmd: 'entrypoint: python /app/bench.py --url http://modelo:8080 …',
+        what: 'Diz o que o container executa: o bench.py, apontando para http://modelo:8080. Ele manda a mesma pergunta várias vezes e cronometra cada resposta.',
+        why: 'O endereço usa o nome do outro container. Por isso funciona igual em qualquer máquina, sem configurar rede.',
+        on: ['url'], hot: ['url'], flows: [['url', 'cport', 'perguntas e respostas']] },
+      { part: 'Parte 2 de 2: o container do bench', t: 'Tirar o resultado de dentro do container', cmd: 'volumes: ./resultados:/resultados',
+        what: 'Liga a pasta resultados do seu computador à pasta /resultados do container. O que o bench grava lá aparece na sua pasta.',
+        sem: 'O arquivo com os números seria apagado junto com o container, no fim da medição.',
+        on: ['res'], hot: ['res'], flows: [['bench', 'res', 'grava o resultado']] },
+    ],
+  },
+
+  comandos: {
+    scene: 'run', file: 'terminal',
+    lines: [
+      ['# 1. subir o modelo', null],
+      ['docker compose up -d modelo', 0],
+      ['', null],
+      ['# teste rapido', null],
+      ['curl http://localhost:8080/v1/models', 1],
+      ['', null],
+      ['# 2. anotar o digest da imagem', null],
+      ['docker image inspect ghcr.io/ggml-org/llama.cpp:server \\', 2],
+      ['    --format "{{index .RepoDigests 0}}"', 2],
+      ['', null],
+      ['# 3. medir', null],
+      ['docker compose run --rm bench --machine notebook-bia', 3],
+      ['', null],
+      ['# quando a medicao termina', null],
+      ['#   (o --rm apaga o container do bench)', 4],
+      ['', null],
+      ['# encerrar', null],
+      ['docker compose down', 5],
+      ['docker compose down -v', 6],
+    ],
+    steps: [
+      { t: 'Subir o modelo', cmd: 'docker compose up -d modelo',
+        what: 'Lê o compose.yaml e liga só o container modelo. Na primeira vez baixa a imagem e o arquivo do modelo. O -d deixa rodando em segundo plano.',
+        why: 'É o único passo demorado, e só na primeira vez. Depois o modelo fica de pé, esperando perguntas.',
+        on: ['registry', 'hf', 'modelo', 'prog', 'env', 'weights', 'cport', 'ctx', 'hport', 'vol', 'health'],
+        hot: ['modelo'], flows: [['registry', 'prog', 'imagem'], ['hf', 'weights', 'modelo']] },
+      { t: 'Testar se responde', cmd: 'curl http://localhost:8080/v1/models',
+        what: 'Faz uma pergunta simples ao modelo pela porta 8080 do seu computador: qual modelo você tem carregado?',
+        why: 'Confirma que o caminho está aberto antes de medir. Dá para abrir o mesmo endereço no navegador.',
+        on: ['you'], hot: ['you', 'hport'], flows: [['you', 'hport', 'pergunta'], ['hport', 'cport', '']] },
+      { t: 'Anotar a identidade da imagem', cmd: 'docker image inspect … --format "{{index .RepoDigests 0}}"',
+        what: 'Pede ao Docker o digest da imagem do modelo e guarda na variável IMAGE_DIGEST do terminal.',
+        why: 'O digest é a impressão digital da imagem. Se for igual nas duas máquinas, o ambiente é o mesmo.',
+        on: ['var'], hot: ['var'], flows: [['prog', 'var', 'sha256:…']] },
+      { t: 'Medir', cmd: 'docker compose run --rm bench --machine notebook-bia',
+        what: 'Constrói a imagem do bench se ainda não existir, liga o container, e ele faz a mesma pergunta ao modelo várias vezes, cronometrando. O resultado sai num JSON na pasta resultados.',
+        why: 'É o único comando que muda entre as máquinas: em --machine vai o nome de cada uma.',
+        on: ['dockerfile', 'bench', 'bimg', 'profile', 'wait', 'digest', 'url', 'res'],
+        hot: ['bench'], flows: [['dockerfile', 'bimg', 'build'], ['url', 'cport', 'perguntas'], ['bench', 'res', 'resultado.json']] },
+      { t: 'O container do bench some', cmd: '--rm',
+        what: 'Terminada a medição, o --rm apaga o container do bench. O arquivo JSON continua na sua pasta, e o modelo continua rodando.',
+        why: 'Cada medição começa num container novo e limpo, sem resto da anterior.',
+        off: ['bench', 'bimg', 'profile', 'wait', 'digest', 'url'], on: [], hot: ['res'], flows: [] },
+      { t: 'Desligar tudo', cmd: 'docker compose down',
+        what: 'Para e apaga o container do modelo e a rede interna. A porta 8080 fica livre de novo.',
+        why: 'O volume com o arquivo do modelo não é apagado. A próxima subida é rápida, sem download.',
+        off: ['modelo', 'prog', 'env', 'weights', 'cport', 'ctx', 'health', 'hport'], on: [], hot: ['vol'], flows: [] },
+      { t: 'Apagar também o modelo', cmd: 'docker compose down -v',
+        what: 'Faz o mesmo que o comando anterior e também apaga os volumes. O arquivo de 400 MB vai embora.',
+        why: 'Serve para liberar espaço em disco quando a oficina acabar. Os JSON em resultados continuam, porque estão numa pasta sua.',
+        off: ['vol'], on: [], hot: ['res'], flows: [] },
+    ],
+  },
+};
+
+const ROLES = {
+  dockerfile: '<b>Você está no Dockerfile.</b> Ele monta uma imagem só, a do bench. Cada linha acrescenta uma peça ao pacote. Nenhum container é ligado aqui.',
+  compose: '<b>Você está no compose.yaml.</b> Ele não monta imagem: escolhe os dois containers e conecta as peças (porta, volume, pasta, rede). O Dockerfile aparece numa linha só, <code>build: .</code>',
+  comandos: '<b>Você está no terminal.</b> Os comandos mandam o Docker executar o que os dois arquivos descrevem.',
+};
+const $ = (s, r = document) => r.querySelector(s);
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let tabKey = 'dockerfile', step = 0, timer = null, inGuia = false;
+const KW = /^(\s*)(FROM|COPY|WORKDIR|ENTRYPOINT|docker|curl)\b/;
+const YK = /^(\s*(?:- )?)([A-Za-z_]+):/;
+
+function esc(s) { return s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])); }
+function paint(text) {
+  let h = esc(text);
+  if (KW.test(text)) return h.replace(KW, '$1<span class="k">$2</span>');
+  if (YK.test(text)) return h.replace(YK, '$1<span class="k">$2</span>:');
+  return h;
+}
+
+function renderCode() {
+  const tab = TABS[tabKey], box = $('#code');
+  box.innerHTML = '';
+  $('#fname').textContent = tab.file;
+  tab.lines.forEach(([text, s]) => {
+    const isCm = text.trim().startsWith('#');
+    const el = document.createElement(s === null ? 'div' : 'button');
+    el.className = 'ln' + (isCm ? ' cm' : '');
+    el.innerHTML = isCm ? esc(text) : (paint(text) || ' ');
+    if (s !== null) { el.dataset.step = s; el.type = 'button'; el.addEventListener('click', () => { stop(); go(s); }); }
+    box.appendChild(el);
+  });
+}
+
+function sceneEl() { return $('#scene-' + TABS[tabKey].scene); }
+function find(scene, id) { return scene.querySelector('[data-el="' + id + '"]'); }
+
+function edge(r, tx, ty) { // ponto na borda de r, na direção de (tx, ty)
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2, dx = tx - cx, dy = ty - cy;
+  if (!dx && !dy) return [cx, cy];
+  const k = Math.min(dx ? (r.width / 2) / Math.abs(dx) : Infinity, dy ? (r.height / 2) / Math.abs(dy) : Infinity);
+  return [cx + dx * Math.min(k, 1), cy + dy * Math.min(k, 1)];
+}
+
+function drawFlows() {
+  const scene = sceneEl(), svg = $('svg.wires', scene), flows = TABS[tabKey].steps[step].flows || [];
+  scene.querySelectorAll('.packet, .flabel').forEach(n => n.remove());
+  svg.innerHTML = '';
+  const base = scene.getBoundingClientRect();
+  flows.forEach(([a, b, label]) => {
+    const A = find(scene, a), B = find(scene, b);
+    if (!A || !B) return;
+    const ra = A.getBoundingClientRect(), rb = B.getBoundingClientRect();
+    const ca = [ra.left + ra.width / 2, ra.top + ra.height / 2], cb = [rb.left + rb.width / 2, rb.top + rb.height / 2];
+    let [x1, y1] = edge(ra, cb[0], cb[1]), [x2, y2] = edge(rb, ca[0], ca[1]);
+    x1 -= base.left; y1 -= base.top; x2 -= base.left; y2 -= base.top;
+    const len = Math.hypot(x2 - x1, y2 - y1); if (len < 4) return;
+    const ux = (x2 - x1) / len, uy = (y2 - y1) / len;
+    const ns = 'http://www.w3.org/2000/svg';
+    const line = document.createElementNS(ns, 'line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2 - ux * 8); line.setAttribute('y2', y2 - uy * 8);
+    svg.appendChild(line);
+    const head = document.createElementNS(ns, 'polygon');
+    const bx = x2 - ux * 10, by = y2 - uy * 10;
+    head.setAttribute('points', [[x2, y2], [bx - uy * 5, by + ux * 5], [bx + uy * 5, by - ux * 5]].map(p => p.join(',')).join(' '));
+    svg.appendChild(head);
+    if (label) {
+      const l = document.createElement('span'); l.className = 'flabel'; l.textContent = label;
+      l.style.left = (x1 + x2) / 2 + 'px'; l.style.top = (y1 + y2) / 2 + 'px';
+      scene.appendChild(l);
+    }
+    if (!reduce && len > 30) {
+      const p = document.createElement('span'); p.className = 'packet'; scene.appendChild(p);
+      p.animate([{ transform: `translate(${x1}px,${y1}px)`, opacity: 0 }, { opacity: 1, offset: .15 }, { opacity: 1, offset: .85 },
+                 { transform: `translate(${x2}px,${y2}px)`, opacity: 0 }],
+                { duration: Math.max(900, len * 6), iterations: Infinity, easing: 'ease-in-out' });
+    }
+  });
+}
+
+function go(n) {
+  const tab = TABS[tabKey];
+  step = Math.max(0, Math.min(tab.steps.length - 1, n));
+  const st = tab.steps[step], scene = sceneEl();
+  const on = new Set();
+  for (let i = 0; i <= step; i++) { (tab.steps[i].off || []).forEach(x => on.delete(x)); (tab.steps[i].on || []).forEach(x => on.add(x)); }
+  const ends = new Set((st.flows || []).flatMap(f => [f[0], f[1]]));
+  scene.querySelectorAll('.el').forEach(el => {
+    const id = el.dataset.el;
+    el.classList.toggle('on', on.has(id));
+    el.classList.remove('hot'); void el.offsetWidth;
+    el.classList.toggle('hot', (st.hot || []).includes(id));
+    el.classList.toggle('end', ends.has(id));
+  });
+  scene.classList.toggle('focus', (st.hot || []).length > 0);
+  let first = null;
+  $('#code').querySelectorAll('.ln').forEach(l => {
+    if (l.dataset.step === undefined) return;
+    const s = +l.dataset.step;
+    l.classList.toggle('active', s === step);
+    l.classList.toggle('todo', s > step);
+    if (s === step && !first) first = l;
+  });
+  if (first) { const c = $('.code'); const r = first.getBoundingClientRect(), cr = c.getBoundingClientRect();
+    if (r.top < cr.top + 20 || r.bottom > cr.bottom - 40) c.scrollTop += r.top - cr.top - cr.height / 3; }
+  $('#ex-title').textContent = st.t;
+  $('#ex-cmd').textContent = st.cmd;
+  $('#ex-what').textContent = st.what;
+  $('#ex-part').textContent = st.part || ''; $('#ex-part').hidden = !st.part;
+  $('#ex-why').textContent = st.why || ''; $('#ex-why').hidden = $('#ex-why-l').hidden = !st.why;
+  $('#ex-sem').textContent = st.sem || ''; $('#ex-sem').hidden = $('#ex-sem-l').hidden = !st.sem;
+  $('.explain').hidden = !(st.why || st.sem || st.gl || st.jump);
+  const gl = $('#ex-gl'); gl.hidden = !st.gl; gl.innerHTML = '';
+  if (st.gl) { const h = document.createElement('b'); h.textContent = 'Palavras novas'; gl.appendChild(h);
+    st.gl.forEach(([w, d]) => { const r = document.createElement('span'); const b = document.createElement('b'); b.textContent = w; r.append(b, ': ' + d); gl.appendChild(r); }); }
+  const j = $('#jump'); j.hidden = !st.jump;
+  if (st.jump) { j.textContent = st.jump[1]; j.onclick = () => setTab(st.jump[0]); }
+  $('#count').textContent = (step + 1) + ' / ' + tab.steps.length;
+  $('#prev').disabled = step === 0;
+  $('#next').disabled = step === tab.steps.length - 1;
+  drawFlows(); requestAnimationFrame(drawFlows);
+}
+
+function setTab(k) {
+  if (!TABS[k] && k !== 'guia') k = 'dockerfile';
+  stop();
+  document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.tab === k));
+  inGuia = k === 'guia';
+  $('#guia').hidden = !inGuia; $('.grid').hidden = inGuia;
+  if (inGuia) return;
+  tabKey = k;
+  $('#scene-build').hidden = TABS[k].scene !== 'build';
+  $('#scene-run').hidden = TABS[k].scene !== 'run';
+  $('#role').innerHTML = ROLES[k];
+  renderCode(); go(0);
+}
+
+function stop() { clearInterval(timer); timer = null; $('#play').textContent = 'Reproduzir'; }
+function play() {
+  if (timer) return stop();
+  if (step === TABS[tabKey].steps.length - 1) go(0);
+  $('#play').textContent = 'Pausar';
+  timer = setInterval(() => { if (step >= TABS[tabKey].steps.length - 1) return stop(); go(step + 1); }, 4200);
+}
+
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => { setTab(t.dataset.tab); try { history.replaceState(null, '', '#' + t.dataset.tab); } catch (e) {} }));
+$('#prev').addEventListener('click', () => { stop(); go(step - 1); });
+$('#next').addEventListener('click', () => { stop(); go(step + 1); });
+$('#play').addEventListener('click', play);
+document.addEventListener('keydown', e => {
+  if (inGuia || e.target.closest('.tab')) return;
+  if (e.key === 'ArrowRight') { stop(); go(step + 1); }
+  if (e.key === 'ArrowLeft') { stop(); go(step - 1); }
+});
+const CMDS = [
+  ['Construir a imagem a partir do Dockerfile', 'docker build -t MEU-APP .'],
+  ['Ligar um container e abrir a porta 8000', 'docker run --rm -p 8000:8000 MEU-APP'],
+  ['Ligar em segundo plano, com nome', 'docker run -d --name MEU-APP -p 8000:8000 MEU-APP'],
+  ['Ver os containers ligados', 'docker ps'],
+  ['Ler o que o programa escreveu na tela', 'docker logs -f MEU-APP'],
+  ['Entrar no container para olhar por dentro', 'docker exec -it MEU-APP sh'],
+  ['Parar e apagar o container', 'docker rm -f MEU-APP'],
+  ['Ver as imagens guardadas no computador', 'docker images'],
+  ['Compose: ligar tudo, reconstruindo se o código mudou', 'docker compose up -d --build'],
+  ['Compose: ver o estado de cada container', 'docker compose ps'],
+  ['Compose: ler os registros de todos', 'docker compose logs -f'],
+  ['Compose: desligar tudo (os volumes ficam)', 'docker compose down'],
+  ['Ver a identidade (digest) de uma imagem baixada', 'docker image inspect NOME-DA-IMAGEM --format "{{index .RepoDigests 0}}"'],
+  ['Liberar espaço: apagar o que está parado e sem uso', 'docker system prune'],
+];
+CMDS.forEach(([what, cmd], i) => {
+  const card = document.createElement('div'); card.className = 'cmd-card';
+  const s = document.createElement('span'); s.textContent = what;
+  const line = document.createElement('div'); line.className = 'line';
+  const c = document.createElement('code'); c.id = 'g-cmd-' + i; c.textContent = cmd;
+  const b = document.createElement('button'); b.className = 'copy'; b.type = 'button'; b.dataset.copy = c.id; b.textContent = 'Copiar';
+  line.append(c, b); card.append(s, line); $('#g-cmds').appendChild(card);
+});
+document.addEventListener('click', e => {
+  const b = e.target.closest('.copy'); if (!b) return;
+  const src = document.getElementById(b.dataset.copy), text = src.textContent;
+  const done = msg => { b.textContent = msg; b.classList.add('ok'); setTimeout(() => { b.textContent = 'Copiar'; b.classList.remove('ok'); }, 1800); };
+  const select = () => { const r = document.createRange(); r.selectNodeContents(src); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); done('Selecionado: Ctrl+C'); };
+  try { navigator.clipboard.writeText(text).then(() => done('Copiado'), select); } catch (err) { select(); }
+});
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(drawFlows, 120); });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawFlows);
+
+setTab((location.hash || '').slice(1) || 'dockerfile');
+</script>
+<script>document.documentElement.dataset.pronto = '1';</script>
+</body>
+</html>
