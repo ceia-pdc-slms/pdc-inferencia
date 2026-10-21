@@ -113,6 +113,9 @@ const LABS = [
   { id: "compressao", tipo: "keyword", titulo: "Compressão: as quatro famílias", semana: 5, quem: "Marcos", status: "ok",
     desc: "Do zero: quanto pesa um modelo, o que quantização, pruning, destilação e KV cache fazem com os números, e uma receita para caber em 500 MB.",
     href: "laboratorios/compressao/laboratorio-compressao.html" },
+  { id: "geracao", tipo: "oficina", titulo: "Como um modelo gera texto", semana: 6, quem: "Beatriz", status: "ok",
+    desc: "Prefill, decode, KV cache e sampling. Por que ler 500 tokens é mais rápido que escrever 500, com o tempo estimado para cada máquina.",
+    href: "laboratorios/geracao/geracao-de-texto.html" },
   { id: "transformer", tipo: "oficina", titulo: "Transformer por dentro", semana: 5, quem: "João", status: "breve",
     desc: "Atenção, pesos e funções de ativação. Onde estão os parâmetros de um modelo de 1B, camada por camada.", href: null },
   { id: "testbench", tipo: "ferramenta", titulo: "Testbench", semana: null, quem: "time", status: "proto",
@@ -123,6 +126,8 @@ const TIPOS = { todos: "Todos", oficina: "Oficinas", keyword: "Keywords", ferram
 const STATUS = { ok: ["Disponível", "ok"], proto: ["Protótipo", "acc"], breve: ["Em breve", ""] };
 
 const MATERIAIS = [
+  ["Como um modelo gera texto", "Principal · semana 6 · Beatriz", "apresentacoes/semana-06_2026-10-23/principal_beatriz_como-um-modelo-gera-texto/como-um-modelo-gera-texto.pdf"],
+  ["gera_texto.py: ler × escrever", "Principal · semana 6 · Beatriz", "apresentacoes/semana-06_2026-10-23/principal_beatriz_como-um-modelo-gera-texto/gera_texto.py"],
   ["Docker na Prática", "Oficina · semana 2 · Beatriz", "apresentacoes/semana-02_2026-09-25/principal_beatriz_docker-na-pratica/docker-na-pratica.pptx"],
   ["Quantização: representação numérica", "Keyword · semana 2 · Beatriz", "apresentacoes/semana-02_2026-09-25/keyword_beatriz_quantizacao-1-representacao-numerica/quantizacao-representacao-numerica.pdf"],
   ["Guia de estudo: quantização", "Keyword · semana 2 · Beatriz", "apresentacoes/semana-02_2026-09-25/keyword_beatriz_quantizacao-1-representacao-numerica/guia-de-estudo.md"],

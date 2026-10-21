@@ -48,6 +48,7 @@ Tudo abre a partir de [`index.html`](index.html), o hub dos laboratórios e do m
 | [`index.html`](index.html) | Hub: lista dos laboratórios e do material de apoio |
 | [`laboratorios/docker/docker-por-dentro.html`](laboratorios/docker/docker-por-dentro.html) | Oficina de Docker (semana 2) |
 | [`laboratorios/compressao/laboratorio-compressao.html`](laboratorios/compressao/laboratorio-compressao.html) | Compressão 1/2: as quatro famílias e a receita para caber em 500 MB (semana 5) |
+| [`laboratorios/geracao/geracao-de-texto.html`](laboratorios/geracao/geracao-de-texto.html) | Como um modelo gera texto: prefill, decode, KV cache e sampling (semana 6) |
 | [`testbench/index.html`](testbench/index.html) | Bancada de medição: pipelines, execução com log ao vivo, comparação de resultados |
 
 ### O que precisa estar instalado
@@ -57,7 +58,7 @@ Tudo abre a partir de [`index.html`](index.html), o hub dos laboratórios e do m
 | Ver os laboratórios | Só um navegador |
 | Usar o testbench | Python 3.9 ou mais novo (só biblioteca padrão, nada de `pip install`) **ou** Docker |
 | Ter um modelo para medir | Docker Desktop (Windows/macOS) ou Docker Engine (Linux), **aberto e rodando** |
-| Rodar os testes | Python; Node 18+ para os testes do laboratório de compressão; Chrome ou Edge para os testes das páginas |
+| Rodar os testes | Python; Node 18+ para os testes das contas dos laboratórios; Chrome ou Edge para os testes das páginas |
 
 ### Jeito 1: tudo em containers (recomendado)
 
@@ -104,7 +105,7 @@ Rodam sem modelo nenhum: um servidor falso, compatível com OpenAI e com tempos 
 
 ```bash
 python -m unittest tests.test_bancada -v   # bancada, bench.py, pipelines e API (~45 s)
-node --test tests/calculo.test.js          # contas do laboratório de compressão (<1 s)
+node --test tests/calculo.test.js tests/geracao.test.js   # contas dos laboratórios (<1 s)
 python -m unittest tests.test_paginas -v   # abre cada página no Chrome/Edge sem janela (~8 min)
 ```
 

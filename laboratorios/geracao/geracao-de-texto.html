@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Como um modelo gera texto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css">
+<link rel="stylesheet" href="../../assets/tema.css">
+<script src="../../assets/tema.js" defer></script>
+<script src="geracao.js" defer></script>
+<style>
+/* cores das fases: prefill = c1 (azul), decode = c2 (laranja), KV cache = c4 (roxo), sampling = c3 (verde) */
+:root { --pre: var(--c1); --dec: var(--c2); --kv: var(--c4); --samp: var(--c3); }
+.layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 56px; }
+.indice { position: sticky; top: 84px; align-self: start; padding-top: 72px; display: flex; flex-direction: column; gap: 2px; font-size: .86rem; }
+.indice a { text-decoration: none; color: var(--faint); padding: 6px 0 6px 14px; border-left: 2px solid var(--line); transition: color .25s, border-color .25s; display: flex; gap: 10px; }
+.indice a span { font: 500 .72rem var(--font-mono); padding-top: 2px; }
+.indice a:hover { color: var(--fg); }
+.indice a.ativo { color: var(--fg); border-left-color: var(--c, var(--fg)); }
+
+.hero { padding: 72px 0 24px; }
+.pergunta { margin-top: 32px; display: flex; gap: 16px; align-items: flex-start; padding: 18px 20px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); max-width: 760px; }
+.pergunta b { font: 500 .7rem var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); white-space: nowrap; padding-top: 4px; }
+.pergunta p { margin: 0; font-size: 1.08rem; font-weight: 500; }
+.fases-leg { margin-top: 20px; display: flex; gap: 8px; flex-wrap: wrap; }
+.fases-leg span { font: 500 .78rem var(--font-mono); padding: 5px 10px; border-radius: 999px; color: #fff; background: var(--c); }
+
+.cap { padding-top: 96px; scroll-margin-top: 60px; }
+.cap-head { display: flex; gap: 18px; align-items: baseline; margin-bottom: 8px; }
+.cap-num { font: 500 .8rem var(--font-mono); color: var(--c, var(--accent)); padding: 3px 8px; border-radius: 6px; background: color-mix(in srgb, var(--c, var(--accent)) 12%, transparent); flex: none; }
+.cap p.texto { max-width: 70ch; color: var(--muted); font-size: 1.02rem; margin: 14px 0 0; }
+.cap p.texto b { color: var(--fg); font-weight: 600; }
+.palco { margin-top: 32px; display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(280px, .7fr); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; }
+.palco-vis { padding: 28px; border-right: 1px solid var(--line); min-width: 0; display: flex; flex-direction: column; gap: 18px; }
+.palco-txt { padding: 28px; display: flex; flex-direction: column; gap: 14px; background: color-mix(in srgb, var(--sunken) 45%, var(--surface)); }
+.palco-txt h3 { font: 600 1.3rem/1.2 var(--font-display); margin: 0; }
+.palco-txt p { margin: 0; color: var(--muted); }
+.palco-txt p b { color: var(--fg); }
+.rotulo { font: 500 .72rem var(--font-mono); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.botoes { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.metricas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border-radius: var(--r); overflow: hidden; border: 1px solid var(--line); }
+.metricas div { background: var(--surface); padding: 10px 12px; min-width: 0; }
+.metricas small { display: block; font-size: .72rem; color: var(--muted); }
+.metricas b { font: 500 1.05rem var(--font-mono); font-variant-numeric: tabular-nums; }
+@keyframes entra { from { opacity: 0; transform: translateY(6px); } }
+
+/* 01 · o laço */
+.frase { font: 500 1.05rem var(--font-mono); min-height: 2.2em; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.frase span { padding: 2px 8px; border-radius: 5px; background: var(--sunken); }
+.frase span.gerado { background: var(--c2-soft); color: var(--fg); }
+.frase span.novo { background: var(--dec); color: #fff; animation: entra .35s var(--ease); }
+.frase span.fim { background: var(--fg); color: var(--bg); }
+.circuito { display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: center; }
+.caixa-modelo { background: var(--fg); color: var(--bg); border-radius: var(--r); padding: 16px 18px; text-align: center; font: 600 1rem var(--font-display); min-width: 140px; }
+.caixa-modelo small { display: block; font: .72rem var(--font-mono); opacity: .7; margin-top: 4px; }
+.caixa-modelo.pulsa { animation: pulsa .5s var(--ease); }
+@keyframes pulsa { 50% { transform: scale(1.06); } }
+.probs { display: flex; flex-direction: column; gap: 6px; }
+.prob { display: grid; grid-template-columns: 82px 1fr 46px; gap: 8px; align-items: center; font-size: .84rem; }
+.prob .tok { font-family: var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pbar { height: 18px; background: var(--sunken); border-radius: 5px; overflow: hidden; }
+.pbar i { display: block; height: 100%; border-radius: 5px; background: var(--c, var(--samp)); transition: width .45s var(--ease); }
+.prob b { font: 500 .78rem var(--font-mono); text-align: right; font-variant-numeric: tabular-nums; }
+.prob.escolhido .tok { color: var(--dec); font-weight: 600; }
+
+/* 02 · prefill × decode */
+.ctrl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 20px; padding: 20px; }
+.ctrl .campo.largo { grid-column: 1 / -1; }
+.seg { flex-wrap: wrap; }
+.corrida { display: flex; flex-direction: column; gap: 14px; }
+.raia { display: grid; grid-template-columns: 150px 1fr; gap: 12px; align-items: center; }
+.raia > div:first-child small { display: block; color: var(--muted); font-size: .76rem; }
+.raia > div:first-child b { font-size: .92rem; }
+.pista { position: relative; height: 34px; background: var(--sunken); border-radius: 8px; overflow: hidden; }
+.pista i { position: absolute; inset: 0 auto 0 0; border-radius: 8px; transition: width .8s var(--ease); }
+.pista span { position: absolute; right: 10px; top: 7px; font: 500 .8rem var(--font-mono); color: var(--fg); }
+.linha-tempo { position: relative; height: 46px; background: var(--sunken); border-radius: 8px; overflow: hidden; }
+.linha-tempo .lt-pre { position: absolute; top: 6px; bottom: 6px; left: 0; background: var(--pre); border-radius: 6px; }
+.linha-tempo .lt-tok { position: absolute; top: 14px; bottom: 14px; width: 3px; background: var(--dec); border-radius: 2px; }
+.lt-leg { display: flex; justify-content: space-between; font: .74rem var(--font-mono); color: var(--faint); margin-top: 6px; }
+.chip.pre { background: var(--c1-soft); color: var(--pre); }
+.chip.dec { background: var(--c2-soft); color: var(--dec); }
+.tabela td b { font-family: var(--font-mono); font-weight: 500; }
+.nota { font-size: .8rem; color: var(--faint); margin: 0; }
+
+/* 03 · KV cache */
+.kv-grades { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.kv-grade { display: flex; flex-direction: column; gap: 4px; }
+.kv-linha { display: flex; gap: 4px; align-items: center; height: 24px; }
+.kv-linha small { width: 54px; font: .7rem var(--font-mono); color: var(--faint); flex: none; }
+.kv-c { width: 22px; height: 22px; border-radius: 4px; flex: none; animation: entra .3s var(--ease); }
+.kv-c.novo { background: var(--dec); }
+.kv-c.refeito { background: color-mix(in srgb, var(--bad) 30%, var(--surface)); box-shadow: inset 0 0 0 1.5px var(--bad); }
+.kv-c.cache { background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--kv); }
+.kv-leg { display: flex; gap: 16px; flex-wrap: wrap; font-size: .8rem; color: var(--muted); }
+.kv-leg span { display: inline-flex; gap: 6px; align-items: center; }
+.kv-leg i { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+.grandes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.grande { background: var(--sunken); border-radius: var(--r); padding: 14px 16px; }
+.grande small { display: block; font-size: .76rem; color: var(--muted); }
+.grande b { font: 600 1.6rem/1.2 var(--font-display); font-variant-numeric: tabular-nums; display: block; }
+.grande span { font-size: .76rem; color: var(--muted); }
+
+/* 04 · sampling */
+.samp { margin-top: 32px; display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 20px; align-items: start; }
+.samp-in { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.samp-out { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+.samp-out .prob { grid-template-columns: 110px 1fr 56px; }
+.prob.cortado .tok { color: var(--faint); text-decoration: line-through; }
+.sorteios { display: flex; flex-wrap: wrap; gap: 6px; min-height: 34px; }
+.sorteios span { font: 500 .8rem var(--font-mono); padding: 3px 8px; border-radius: 5px; background: var(--c3-soft); animation: entra .3s var(--ease); }
+
+/* 05 · resposta */
+.ordem { margin-top: 32px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.ordem .card { padding: 22px; display: flex; flex-direction: column; gap: 10px; border-top: 4px solid var(--c); }
+.ordem small { font: 500 .72rem var(--font-mono); color: var(--c); }
+.ordem h3 { margin: 0; font: 600 1.2rem var(--font-display); }
+.ordem p { margin: 0; color: var(--muted); font-size: .93rem; }
+.resposta { margin-top: 20px; padding: 22px 26px; border-radius: var(--r-lg); background: var(--fg); color: var(--bg); font-size: 1.04rem; line-height: 1.6; }
+.resposta b { color: var(--bg); }
+.material { margin-top: 28px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.material a { padding: 18px; display: flex; flex-direction: column; gap: 6px; text-decoration: none; }
+.material small { font: 500 .7rem var(--font-mono); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.material b { font-weight: 600; }
+.material span { color: var(--muted); font-size: .9rem; }
+.rodape { padding: 80px 0 60px; color: var(--faint); font-size: .84rem; }
+
+@media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } .indice { display: none; } }
+@media (max-width: 900px) {
+  .palco, .samp { grid-template-columns: 1fr; }
+  .palco-vis { border-right: 0; border-bottom: 1px solid var(--line); }
+  .ordem, .material { grid-template-columns: 1fr; }
+  .metricas { grid-template-columns: 1fr 1fr; }
+  .ctrl { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .palco-vis, .palco-txt { padding: 18px; }
+  .kv-grades, .grandes { grid-template-columns: 1fr; }
+  .raia { grid-template-columns: 1fr; gap: 4px; }
+  .circuito { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<header class="appbar"><div class="appbar-in">
+  <a class="marca" href="../../index.html" aria-label="Início">
+    <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" style="fill:var(--accent)"/><g fill="#fff"><rect x="6.5" y="7" width="3.6" height="18" rx="1.3"/><rect x="12" y="10.5" width="3.6" height="14.5" rx="1.3"/><rect x="17.5" y="14" width="3.6" height="11" rx="1.3"/><rect x="23" y="17.5" width="3.6" height="7.5" rx="1.3"/></g></svg>
+    <span><b>Compressão &amp; Testbench</b><small>PDC · SLMs</small></span>
+  </a>
+  <nav class="appnav">
+    <a href="../../index.html" aria-current="page">Laboratórios</a>
+    <a href="../../testbench/index.html">Testbench</a>
+    <button class="tema-btn" data-tema-alternar aria-label="Alternar tema claro/escuro"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg></button>
+  </nav>
+</div></header>
+
+<div class="wrap layout">
+  <nav class="indice" id="indice" aria-label="Partes">
+    <a href="#laco"><span>01</span>O laço</a>
+    <a href="#fases" style="--c:var(--c1)"><span>02</span>Prefill × decode</a>
+    <a href="#kv" style="--c:var(--c4)"><span>03</span>KV cache</a>
+    <a href="#sampling" style="--c:var(--c3)"><span>04</span>Sampling</a>
+    <a href="#resposta"><span>05</span>A resposta</a>
+  </nav>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">Principal · semana 6 · Beatriz</p>
+      <h1 class="display">Como um modelo gera texto</h1>
+      <p class="lede">Um modelo de linguagem só sabe fazer uma coisa: olhar um texto e dar a probabilidade do próximo token. Para escrever uma resposta, ele repete isso muitas vezes. Esta página mostra as quatro peças desse processo e onde o tempo vai.</p>
+      <div class="fases-leg"><span style="--c:var(--c1)">prefill</span><span style="--c:var(--c2)">decode</span><span style="--c:var(--c4)">KV cache</span><span style="--c:var(--c3)">sampling</span></div>
+      <div class="pergunta"><b>Pergunta da semana</b><p>Por que ler uma pergunta de 500 tokens é mais rápido que escrever uma resposta de 500 tokens?</p></div>
+    </section>
+
+    <!-- ===================== 01 ===================== -->
+    <section class="cap" id="laco" data-revelar>
+      <div class="cap-head"><span class="cap-num">01</span><h2 class="display">O laço: um token por vez</h2></div>
+      <p class="texto">Cada clique é <b>uma passada inteira pelo modelo</b>. Ele devolve uma lista de probabilidades, um token é escolhido e volta para o fim do texto. A próxima passada já enxerga esse token. É por isso que a resposta sai <b>em fila</b>: o token 3 não existe antes do token 2.</p>
+      <div class="palco">
+        <div class="palco-vis">
+          <span class="rotulo">Texto até agora</span>
+          <div class="frase" id="lFrase" aria-live="polite"></div>
+          <div class="circuito">
+            <div class="caixa-modelo" id="lModelo">modelo<small id="lPass">0 passadas</small></div>
+            <div aria-hidden="true" style="font:500 1.4rem var(--font-mono);color:var(--faint)">→</div>
+            <div class="probs" id="lProbs"></div>
+          </div>
+          <div class="botoes">
+            <button class="btn primario" id="lProx">Próximo token</button>
+            <button class="btn" id="lReset">Recomeçar</button>
+          </div>
+        </div>
+        <div class="palco-txt" id="lTxt"></div>
+      </div>
+    </section>
+
+    <!-- ===================== 02 ===================== -->
+    <section class="cap" id="fases" style="--c:var(--c1)" data-revelar>
+      <div class="cap-head"><span class="cap-num">02</span><h2 class="display">Ler e escrever: duas fases</h2></div>
+      <p class="texto">O <b style="color:var(--pre)">prefill</b> lê o prompt inteiro numa passada só: os tokens já existem, então passam juntos. O <b style="color:var(--dec)">decode</b> escreve a resposta com uma passada por token. Em toda passada, <b>os pesos do modelo inteiro viajam da memória até o processador</b>. Mude o modelo, o formato e a máquina e veja o que acontece com o tempo.</p>
+      <div class="palco" style="grid-template-columns:minmax(0,1fr)">
+        <div class="ctrl" style="border-bottom:1px solid var(--line)">
+          <label class="campo"><span>Modelo</span><select id="fModelo"></select></label>
+          <div class="campo"><span>Formato dos pesos</span><div class="seg" id="fFmt" role="group" aria-label="Formato"></div></div>
+          <div class="campo largo"><span>Máquina <em id="fMaqInfo"></em></span><div class="seg" id="fMaq" role="group" aria-label="Máquina"></div></div>
+          <label class="campo"><span>Tokens da pergunta (prefill) <output id="fPOut">500</output></span><input type="range" id="fP" min="10" max="4000" step="10" value="500"></label>
+          <label class="campo"><span>Tokens da resposta (decode) <output id="fROut">500</output></span><input type="range" id="fR" min="10" max="2000" step="10" value="500"></label>
+        </div>
+        <div class="palco-vis" style="border-right:0">
+          <div class="corrida">
+            <div class="raia"><div><b style="color:var(--pre)">Ler</b><small id="fPreLbl">500 tokens</small></div><div class="pista"><i id="fPreBar" style="background:var(--pre)"></i><span id="fPreT"></span></div></div>
+            <div class="raia"><div><b style="color:var(--dec)">Escrever</b><small id="fDecLbl">500 tokens</small></div><div class="pista"><i id="fDecBar" style="background:var(--dec)"></i><span id="fDecT"></span></div></div>
+          </div>
+          <div>
+            <div class="botoes" style="margin-bottom:10px"><button class="btn primario" id="fPlay">Ver a resposta sendo gerada</button><span class="nota" id="fPlayInfo">Animação no tempo estimado, acelerado para caber em alguns segundos.</span></div>
+            <div class="linha-tempo" id="fLinha" aria-hidden="true"><div class="lt-pre" id="fLtPre" style="width:0"></div></div>
+            <div class="lt-leg"><span>Enter</span><span id="fLtInfo"></span><span>último token</span></div>
+          </div>
+          <div class="metricas">
+            <div><small>Tempo até o 1º token (TTFT)</small><b id="fmTtft">—</b></div>
+            <div><small>Velocidade do decode</small><b id="fmTps">—</b></div>
+            <div><small>Escrever 1 token vs ler 1</small><b id="fmRaz">—</b></div>
+            <div><small>KV cache no fim</small><b id="fmKv">—</b></div>
+          </div>
+          <table class="tabela">
+            <thead><tr><th></th><th class="r">Prefill</th><th class="r">Decode (cada token)</th></tr></thead>
+            <tbody>
+              <tr><td>Pesos lidos da memória por passada</td><td class="r"><b id="tPreB"></b></td><td class="r"><b id="tDecB"></b></td></tr>
+              <tr><td>Contas (2 × pesos × tokens)</td><td class="r"><b id="tPreC"></b></td><td class="r"><b id="tDecC"></b></td></tr>
+              <tr><td>Contas por byte lido</td><td class="r"><b id="tPreI"></b></td><td class="r"><b id="tDecI"></b></td></tr>
+              <tr><td>Quem limita</td><td class="r"><span class="chip pre" id="tPreL"></span></td><td class="r"><span class="chip dec" id="tDecL"></span></td></tr>
+            </tbody>
+          </table>
+          <p class="nota" id="fNota"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== 03 ===================== -->
+    <section class="cap" id="kv" style="--c:var(--c4)" data-revelar>
+      <div class="cap-head"><span class="cap-num">03</span><h2 class="display">KV cache: não refazer o passado</h2></div>
+      <p class="texto">Para escolher o próximo token, a atenção compara o token novo com <b>todos os anteriores</b>, usando dois vetores de cada um: K e V. Eles não mudam depois de calculados, porque um token só olha para trás. Então dá para <b>guardar</b>. Clique em "Próximo passo" e compare.</p>
+      <div class="palco">
+        <div class="palco-vis">
+          <div class="kv-grades">
+            <div class="kv-grade"><span class="rotulo" style="color:var(--bad)">Sem KV cache</span><div id="kSem"></div></div>
+            <div class="kv-grade"><span class="rotulo" style="color:var(--kv)">Com KV cache</span><div id="kCom"></div></div>
+          </div>
+          <div class="kv-leg">
+            <span><i style="background:var(--dec)"></i>calculado agora</span>
+            <span><i style="background:color-mix(in srgb,var(--bad) 30%,var(--surface));box-shadow:inset 0 0 0 1.5px var(--bad)"></i>recalculado à toa</span>
+            <span><i style="box-shadow:inset 0 0 0 1.5px var(--kv)"></i>lido do cache</span>
+          </div>
+          <div class="botoes"><button class="btn primario" id="kProx">Próximo passo</button><button class="btn" id="kReset">Recomeçar</button></div>
+          <div class="grandes">
+            <div class="grande"><small>Passagens de token, sem cache</small><b id="kgSem">—</b><span id="kgSemS"></span></div>
+            <div class="grande"><small>Passagens de token, com cache</small><b id="kgCom">—</b><span id="kgComS"></span></div>
+            <div class="grande"><small>Memória do cache no fim</small><b id="kgMem">—</b><span id="kgMemS"></span></div>
+          </div>
+        </div>
+        <div class="palco-txt">
+          <h3>Troca conta por memória</h3>
+          <p>Sem cache, o passo <b>n</b> reprocessa os <b>n</b> tokens: o trabalho total cresce com o quadrado do tamanho do texto. Com cache, cada passo processa <b>só o token novo</b>.</p>
+          <p>O preço é memória: <code>2 × camadas × cabeças KV × dimensão × bytes</code> por token. No Qwen2.5-0.5B dá <b>12 KB por token</b>; no Llama-3.1-8B, <b>128 KB</b>.</p>
+          <p>Os números grandes ao lado usam o modelo e os tamanhos escolhidos na parte 02.</p>
+          <p><b>O que o cache não resolve:</b> os pesos continuam sendo lidos inteiros a cada token. É por isso que, mesmo com cache, escrever continua mais lento que ler.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== 04 ===================== -->
+    <section class="cap" id="sampling" style="--c:var(--c3)" data-revelar>
+      <div class="cap-head"><span class="cap-num">04</span><h2 class="display">Sampling: das notas à palavra</h2></div>
+      <p class="texto">O modelo não escolhe o token: ele dá uma <b>nota (logit)</b> para cada um dos ~150 mil tokens do vocabulário. O <b>softmax</b> transforma as notas em probabilidades, e o sampling sorteia. Os botões abaixo são os mesmos do Ollama e do llama.cpp.</p>
+      <div class="samp">
+        <div class="card samp-in">
+          <div class="campo"><span>Frase</span><div class="seg" id="sEx" role="group" aria-label="Exemplo"></div></div>
+          <label class="campo"><span>Temperatura <output id="sTOut">1,0</output></span><input type="range" id="sT" min="0" max="2" step="0.1" value="1"><small>0 = greedy (sempre o mais provável). Menor que 1 afia; maior que 1 achata.</small></label>
+          <label class="campo"><span>Top-k <output id="sKOut">desligado</output></span><input type="range" id="sK" min="0" max="8" step="1" value="0"><small>Fica só com os k tokens mais prováveis.</small></label>
+          <label class="campo"><span>Top-p <output id="sPOut">1,00</output></span><input type="range" id="sP" min="0.1" max="1" step="0.05" value="1"><small>Fica com o menor grupo que soma p.</small></label>
+          <label class="campo"><span>Seed</span><input type="number" id="sSeed" value="42" min="0" step="1"><small>Mesma seed, mesmos sorteios. Para medir desempenho: temperatura 0 e seed fixa.</small></label>
+        </div>
+        <div class="card samp-out">
+          <span class="rotulo" id="sFrase"></span>
+          <div class="probs" id="sProbs"></div>
+          <div class="botoes"><button class="btn primario" id="sSort">Sortear 20 vezes</button><span class="nota" id="sResumo"></span></div>
+          <div class="sorteios" id="sSorteios" aria-live="polite"></div>
+          <p class="nota">Logits inventados para o exemplo, com a forma típica de uma saída real. Escolher o token é ordenar uma lista pequena: custa quase nada perto da passada pelo modelo.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== 05 ===================== -->
+    <section class="cap" id="resposta" data-revelar>
+      <div class="cap-head"><span class="cap-num">05</span><h2 class="display">A resposta</h2></div>
+      <div class="ordem">
+        <div class="card" style="--c:var(--c1)"><small>Ler = 1 passada</small><h3>Tokens juntos</h3><p>A pergunta já existe inteira. Os 500 tokens passam juntos: os pesos viajam da memória <b>uma vez</b> e servem a todos. O processador faz conta de matriz, que é o que ele faz melhor.</p></div>
+        <div class="card" style="--c:var(--c2)"><small>Escrever = 500 passadas</small><h3>Tokens em fila</h3><p>Cada token depende do anterior. Em cada passada, <b>todos os pesos</b> viajam para calcular um token só. O processador passa o tempo esperando a memória.</p></div>
+        <div class="card" style="--c:var(--c4)"><small>O KV cache ajuda, não resolve</small><h3>O passado fica guardado</h3><p>Evita recalcular os tokens antigos, mas não evita reler os pesos a cada token. E o sampling quase não custa nada.</p></div>
+      </div>
+      <div class="resposta" id="resp"></div>
+      <div class="material">
+        <a class="card" href="../../apresentacoes/semana-06_2026-10-23/principal_beatriz_como-um-modelo-gera-texto/como-um-modelo-gera-texto.pdf"><small>Slides</small><b>Como um modelo gera texto</b><span>22 slides, com notas do apresentador no .pptx.</span></a>
+        <a class="card" href="../../apresentacoes/semana-06_2026-10-23/principal_beatriz_como-um-modelo-gera-texto/gera_texto.py"><small>Código</small><b>gera_texto.py</b><span>Mede ler × escrever na sua máquina: numpy, transformers ou llama.cpp.</span></a>
+        <a class="card" href="../compressao/laboratorio-compressao.html#kv"><small>Laboratório</small><b>Compressão: KV cache</b><span>Quanto o cache pesa e como comprimir.</span></a>
+      </div>
+    </section>
+    <p class="rodape">Os tempos da parte 02 são estimativas de ordem de grandeza (o maior entre tempo de conta e tempo de memória). O notebook foi calibrado com a medida da oficina de Docker; as outras máquinas são aproximadas. As contas estão em <code>laboratorios/geracao/geracao.js</code>, testadas em <code>tests/geracao.test.js</code>.</p>
+  </main>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+const G = window.Geracao;
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const nf = (v, d = 0) => v.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
+const bytes = b => b >= 1e9 ? nf(b / 1e9, b >= 1e10 ? 0 : 1) + " GB" : b >= 1e6 ? nf(b / 1e6, b >= 1e8 ? 0 : 1) + " MB" : nf(b / 1e3, 0) + " KB";
+const flops = f => f >= 1e12 ? nf(f / 1e12, 1) + " TFLOP" : f >= 1e9 ? nf(f / 1e9, f >= 1e11 ? 0 : 1) + " GFLOP" : nf(f / 1e6, 0) + " MFLOP";
+const tempo = s => s >= 60 ? nf(s / 60, 1) + " min" : s >= 1 ? nf(s, 1) + " s" : nf(s * 1000, s >= 0.01 ? 0 : 1) + " ms";
+const segBotoes = (el, itens, atual, fn) => {
+  el.innerHTML = itens.map(([v, t]) => `<button data-v="${esc(v)}" aria-pressed="${v === atual}">${esc(t)}</button>`).join("");
+  el.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; el.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); fn(b.dataset.v); });
+};
+const barra = (tok, p, extra = "", cls = "") => `<div class="prob ${cls}"><span class="tok">${esc(tok)}</span><div class="pbar"><i style="width:${(p * 100).toFixed(1)}%${extra}"></i></div><b>${nf(p * 100, p > 0 && p < 0.01 ? 1 : 0)}%</b></div>`;
+
+/* ---------- 01 · o laço ---------- */
+const LACO = {
+  prompt: ["O", "gato", "subiu", "no"],
+  passos: [
+    [["telhado", .50], ["muro", .20], ["sofá", .12]],
+    [["e", .41], ["para", .22], [".", .15]],
+    [["dormiu", .38], ["ficou", .25], ["miou", .14]],
+    [[".", .61], ["ao", .12], ["a", .09]],
+    [["<fim>", .72], ["Ele", .10], ["Depois", .06]],
+  ],
+};
+const TXT_LACO = [
+  ["Antes de começar", "O prompt tem 4 tokens. Clique em <b>Próximo token</b>: a primeira passada lê os 4 juntos (isso é o <b>prefill</b>) e sai o primeiro token da resposta."],
+  ["Passada 1 · prefill", "Os 4 tokens do prompt entraram juntos. O modelo devolveu as probabilidades e o sampling escolheu <b>telhado</b>."],
+  ["Passada 2 · decode", "Agora entra <b>um token só</b>, o telhado. Os do prompt não são recalculados: o K e o V deles estão no KV cache."],
+  ["Passada 3 · decode", "Mais uma passada inteira pelo modelo para mais um token. Cada passada lê <b>todos os pesos</b> da memória."],
+  ["Passada 4 · decode", "Repare: não dá para pular para a passada 5 sem terminar a 4. O token seguinte depende deste."],
+  ["Passada 5 · fim", "Saiu o token de fim. 5 passadas para 5 tokens de resposta: <b>uma passada por token escrito</b>, contra uma só para ler o prompt inteiro."],
+];
+let lPasso = 0;
+function renderLaco(animar) {
+  const ger = LACO.passos.slice(0, lPasso).map(p => p[0][0]);
+  $("lFrase").innerHTML = LACO.prompt.map(t => `<span>${esc(t)}</span>`).join("") +
+    ger.map((t, i) => `<span class="${t === "<fim>" ? "fim" : i === ger.length - 1 ? "novo" : "gerado"}">${esc(t)}</span>`).join("");
+  $("lPass").textContent = `${lPasso} passada${lPasso === 1 ? "" : "s"}`;
+  const p = lPasso ? LACO.passos[lPasso - 1] : null;
+  $("lProbs").innerHTML = p ? p.map(([t, v], i) => barra(t, v, "", i === 0 ? "escolhido" : "")).join("") : `<p class="nota">As probabilidades aparecem depois da 1ª passada.</p>`;
+  const [h, t] = TXT_LACO[lPasso];
+  $("lTxt").innerHTML = `<span class="rotulo" style="color:${lPasso <= 1 ? "var(--pre)" : "var(--dec)"}">${lPasso === 0 ? "pronto" : lPasso === 1 ? "prefill" : "decode"}</span><h3>${h}</h3><p>${t}</p>`;
+  $("lProx").disabled = lPasso >= LACO.passos.length;
+  if (animar) { const m = $("lModelo"); m.classList.remove("pulsa"); void m.offsetWidth; m.classList.add("pulsa"); }
+}
+$("lProx").addEventListener("click", () => { if (lPasso < LACO.passos.length) { lPasso++; renderLaco(true); } });
+$("lReset").addEventListener("click", () => { lPasso = 0; renderLaco(); });
+renderLaco();
+
+/* ---------- 02 · prefill × decode ---------- */
+const F = { modelo: "qwen05", formato: "Q4_K_M", maquina: "notebook", prompt: 500, resposta: 500 };
+$("fModelo").innerHTML = G.MODELOS.map(m => `<option value="${m.id}">${esc(m.nome)}${m.oficina ? " (oficina)" : ""}</option>`).join("");
+$("fModelo").value = F.modelo;
+$("fModelo").addEventListener("input", e => { F.modelo = e.target.value; calc(); });
+segBotoes($("fFmt"), G.FORMATOS.map(f => [f.id, f.nome]), F.formato, v => { F.formato = v; calc(); });
+segBotoes($("fMaq"), G.MAQUINAS.map(q => [q.id, q.nome]), F.maquina, v => { F.maquina = v; calc(); });
+for (const [id, k] of [["fP", "prompt"], ["fR", "resposta"]]) $(id).addEventListener("input", e => { F[k] = +e.target.value; calc(); });
+
+let T0 = null;
+function calc() {
+  const t = G.tempos(F), q = G.maquina(F.maquina), m = G.modelo(F.modelo);
+  T0 = t;
+  $("fPOut").textContent = nf(F.prompt); $("fROut").textContent = nf(F.resposta);
+  $("fMaqInfo").textContent = q.pico;
+  $("fPreLbl").textContent = `${nf(F.prompt)} tokens`; $("fDecLbl").textContent = `${nf(F.resposta)} tokens`;
+  const mx = Math.max(t.prefill.segundos, t.decode.segundos);
+  $("fPreBar").style.width = Math.max(1, 100 * t.prefill.segundos / mx) + "%";
+  $("fDecBar").style.width = Math.max(1, 100 * t.decode.segundos / mx) + "%";
+  $("fPreT").textContent = tempo(t.prefill.segundos); $("fDecT").textContent = tempo(t.decode.segundos);
+  $("fmTtft").textContent = tempo(t.prefill.segundos);
+  $("fmTps").textContent = nf(t.decode.tokPorSeg, t.decode.tokPorSeg < 100 ? 1 : 0) + " tok/s";
+  $("fmRaz").textContent = nf(t.razao, t.razao < 10 ? 1 : 0) + "× mais lento";
+  $("fmKv").textContent = bytes(t.kvFinal);
+  $("tPreB").textContent = bytes(t.pesos); $("tDecB").textContent = bytes(t.pesos);
+  $("tPreC").textContent = flops(t.prefill.contas); $("tDecC").textContent = flops(2 * m.params);
+  $("tPreI").textContent = nf(t.prefill.intensidade, 0); $("tDecI").textContent = nf(2 * m.params / (t.pesos + t.kvPorToken * F.prompt), 1);
+  $("tPreL").textContent = t.prefill.limite; $("tDecL").textContent = t.decode.limite;
+  const arq = `Arquivo de pesos: ${bytes(t.arquivo)}. Por passada são lidos ${bytes(t.pesos)}: todos os blocos e a cabeça de saída; da embedding de entrada sai só a linha de cada token. `;
+  $("fNota").innerHTML = arq + (q.medida
+    ? `Medido de verdade neste notebook: Qwen2.5-0.5B Q4_K_M no llama.cpp escreveu a 60,6 tok/s (oficina de Docker). Em PyTorch float32, <code>gera_texto.py</code> mediu 2,4 s para ler 500 tokens e 43,4 s para escrever 500.`
+    : `Estimativa para ${esc(q.nome)}: banda efetiva de ${nf(q.banda / 1e9)} GB/s e ${nf(q.flops / 1e12, q.flops < 1e12 ? 2 : 0)} TFLOPS efetivos. Ordem de grandeza, não medida.`);
+  $("fLtInfo").textContent = `prefill ${tempo(t.prefill.segundos)} · decode ${tempo(t.decode.segundos)}`;
+  desenhaLinha(1);
+  renderKvNumeros();
+  renderResposta();
+}
+function desenhaLinha(frac) {
+  const t = T0, total = t.prefill.segundos + t.decode.segundos, L = $("fLinha");
+  L.querySelectorAll(".lt-tok").forEach(e => e.remove());
+  const wPre = 100 * t.prefill.segundos / total;
+  $("fLtPre").style.width = Math.max(0.6, wPre * Math.min(1, frac * total / t.prefill.segundos)) + "%";
+  const mostra = Math.min(F.resposta, 160), passo = F.resposta / mostra;
+  const agora = frac * total - t.prefill.segundos;
+  let html = "";
+  for (let i = 0; i < mostra; i++) {
+    const ti = (i + 1) * passo * t.decode.porToken;
+    if (ti > agora + 1e-9) break;
+    html += `<i class="lt-tok" style="left:calc(${wPre + (100 - wPre) * ti / t.decode.segundos}% - 3px)"></i>`;
+  }
+  L.insertAdjacentHTML("beforeend", html);
+}
+let anim = null;
+$("fPlay").addEventListener("click", () => {
+  cancelAnimationFrame(anim);
+  const dur = Tema && Tema.reduzir ? 1 : 4000, t0 = performance.now();
+  const passo = now => { const k = Math.min(1, (now - t0) / dur); desenhaLinha(k); if (k < 1) anim = requestAnimationFrame(passo); };
+  anim = requestAnimationFrame(passo);
+});
+
+/* ---------- 03 · KV cache ---------- */
+let kPasso = 4;
+const KMAX = 8;
+function renderKv() {
+  const linhas = (comCache) => {
+    let h = "";
+    for (let r = 0; r < kPasso; r++) {
+      h += `<div class="kv-linha"><small>passo ${r + 1}</small>`;
+      for (let c = 0; c <= r; c++) h += `<span class="kv-c ${c === r ? "novo" : comCache ? "cache" : "refeito"}"></span>`;
+      h += "</div>";
+    }
+    return h;
+  };
+  $("kSem").innerHTML = linhas(false); $("kCom").innerHTML = linhas(true);
+  $("kProx").disabled = kPasso >= KMAX;
+}
+function renderKvNumeros() {
+  const sem = G.passagens(F.prompt, F.resposta, false), com = G.passagens(F.prompt, F.resposta, true);
+  $("kgSem").textContent = nf(sem); $("kgCom").textContent = nf(com);
+  $("kgSemS").textContent = `${nf(sem / com, 0)}× mais trabalho`;
+  $("kgComS").textContent = `${nf(F.prompt)} do prompt + ${nf(F.resposta)} da resposta`;
+  $("kgMem").textContent = bytes(T0.kvFinal);
+  $("kgMemS").textContent = `${G.modelo(F.modelo).nome}: ${bytes(T0.kvPorToken)} por token`;
+}
+$("kProx").addEventListener("click", () => { if (kPasso < KMAX) { kPasso++; renderKv(); } });
+$("kReset").addEventListener("click", () => { kPasso = 1; renderKv(); });
+renderKv();
+
+/* ---------- 04 · sampling ---------- */
+const S = { ex: G.EXEMPLOS[0].id, T: 1, k: 0, p: 1 };
+segBotoes($("sEx"), G.EXEMPLOS.map(e => [e.id, e.frase + " …"]), S.ex, v => { S.ex = v; $("sSorteios").innerHTML = ""; $("sResumo").textContent = ""; renderSamp(); });
+$("sT").addEventListener("input", e => { S.T = +e.target.value; renderSamp(); });
+$("sK").addEventListener("input", e => { S.k = +e.target.value; renderSamp(); });
+$("sP").addEventListener("input", e => { S.p = +e.target.value; renderSamp(); });
+let sProbs = [];
+function renderSamp() {
+  const ex = G.EXEMPLOS.find(e => e.id === S.ex), logits = ex.logits.map(l => l[1]);
+  sProbs = G.distribuicao(logits, { temperatura: S.T, topK: S.k, topP: S.p });
+  $("sTOut").textContent = S.T === 0 ? "0 (greedy)" : nf(S.T, 1);
+  $("sKOut").textContent = S.k ? String(S.k) : "desligado";
+  $("sPOut").textContent = S.p >= 1 ? "1,00 (desligado)" : nf(S.p, 2);
+  $("sFrase").textContent = `"${ex.frase} ___"`;
+  $("sProbs").innerHTML = ex.logits.map(([t], i) => barra(t, sProbs[i], "", sProbs[i] === 0 ? "cortado" : "")).join("");
+}
+$("sSort").addEventListener("click", () => {
+  const ex = G.EXEMPLOS.find(e => e.id === S.ex);
+  const r = G.rng(Math.max(0, parseInt($("sSeed").value, 10) || 0));
+  const saida = Array.from({ length: 20 }, () => ex.logits[G.sortear(sProbs, r)][0]);
+  $("sSorteios").innerHTML = saida.map((t, i) => `<span style="animation-delay:${i * 30}ms">${esc(t)}</span>`).join("");
+  const dif = new Set(saida).size;
+  $("sResumo").textContent = `${dif} token${dif === 1 ? "" : "s"} diferente${dif === 1 ? "" : "s"} em 20 sorteios`;
+});
+renderSamp();
+
+/* ---------- 05 · resposta ---------- */
+function renderResposta() {
+  const t = T0, m = G.modelo(F.modelo), q = G.maquina(F.maquina);
+  $("resp").innerHTML = `<b>Ler é limitado por cálculo; escrever é limitado por banda de memória.</b> Ler ${nf(F.prompt)} tokens é uma passada só, em que os pesos viajam uma vez. Escrever ${nf(F.resposta)} tokens são ${nf(F.resposta)} passadas em fila, e em cada uma os ${bytes(t.pesos)} de pesos do ${esc(m.nome)} viajam inteiros para produzir um token. Com a configuração da parte 02 (${esc(q.nome)}), ler leva ${tempo(t.prefill.segundos)} e escrever leva ${tempo(t.decode.segundos)}. Para escrever mais rápido: ler menos bytes por token (quantização) ou ter mais banda (hardware).`;
+}
+
+calc();
+
+/* ---------- índice lateral ---------- */
+(function () {
+  const links = [...document.querySelectorAll("#indice a")];
+  const caps = links.map(a => document.querySelector(a.getAttribute("href")));
+  if (!("IntersectionObserver" in window)) return;
+  const io = new IntersectionObserver(ents => {
+    ents.forEach(en => { if (en.isIntersecting) links.forEach((a, i) => a.classList.toggle("ativo", caps[i] === en.target)); });
+  }, { rootMargin: "-45% 0px -50% 0px" });
+  caps.forEach(c => c && io.observe(c));
+})();
+
+document.documentElement.dataset.pronto = "1";
+
+/* ?autoteste: clica em tudo, como uma pessoa faria (usado por tests/test_paginas.py) */
+if (/[?&]autoteste/.test(location.search)) (async () => {
+  const espera = ms => new Promise(r => setTimeout(r, ms));
+  for (let i = 0; i < LACO.passos.length; i++) { $("lProx").click(); await espera(20); }
+  if (!$("lProx").disabled) throw new Error("o laço não terminou");
+  $("lReset").click();
+  for (const b of $("fMaq").querySelectorAll("button")) for (const f of $("fFmt").querySelectorAll("button")) {
+    b.click(); f.click();
+    for (const m of G.MODELOS) { $("fModelo").value = m.id; $("fModelo").dispatchEvent(new Event("input")); }
+  }
+  $("fP").value = 4000; $("fP").dispatchEvent(new Event("input"));
+  $("fR").value = 10; $("fR").dispatchEvent(new Event("input"));
+  $("fPlay").click(); await espera(50);
+  for (let i = 0; i < KMAX; i++) $("kProx").click();
+  if ($("kSem").querySelectorAll(".kv-c.refeito").length !== KMAX * (KMAX - 1) / 2) throw new Error("grade do KV errada");
+  $("kReset").click();
+  for (const b of $("sEx").querySelectorAll("button")) {
+    b.click();
+    for (const T of [0, 0.5, 2]) { $("sT").value = T; $("sT").dispatchEvent(new Event("input")); $("sSort").click(); }
+  }
+  $("sK").value = 3; $("sK").dispatchEvent(new Event("input"));
+  $("sP").value = 0.5; $("sP").dispatchEvent(new Event("input"));
+  $("sSort").click();
+  if ($("sSorteios").children.length !== 20) throw new Error("sorteio não gerou 20 tokens");
+  document.documentElement.dataset.autoteste = "ok";
+})().catch(e => { document.documentElement.dataset.erro = "autoteste: " + e.message; });
+});
+</script>
+</body>
+</html>
