@@ -1,0 +1,35 @@
+.value-slide { padding: 54px 84px; }
+.value-slide h2 { font-size: var(--font-slide-title); line-height: 1.1; letter-spacing: -.04em; margin: 28px 0 24px; }
+.value-slide h2 em { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; color: var(--blue); }
+.value-lead { margin: 0; color: var(--muted); font-size: var(--font-body); line-height: 1.4; }
+.value-figure { margin: 18px 0 0; }
+.value-diagram { width: 100%; display: block; }
+.value-diagram text { font-family: Arial, Helvetica, sans-serif; fill: var(--ink); text-anchor: middle; }
+.value-sentence text { font-size: 36px; }
+.value-sentence rect { fill: #f4ce720a; stroke: var(--yellow); stroke-width: 1.5; }
+.value-target { fill: var(--yellow) !important; }
+.value-stage-label { font-size: 25px; fill: var(--muted) !important; }
+.value-word { font-size: 30px; }
+.value-input rect { fill: var(--bg); stroke: var(--blue); stroke-width: 1.5; }
+.value-input path { stroke: var(--blue); }
+.value-coordinate { stroke-width: 4; stroke-linecap: round; }
+.value-arrow { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.value-matrix { fill: #efa55d0a; stroke: #efa55d; stroke-width: 1.5; }
+.value-matrix-math { color: #efa55d; font-size: 32px; text-align: center; }
+.value-vector rect, .value-contribution rect { fill: var(--bg); stroke: var(--purple); stroke-width: 1.5; }
+.value-vector path, .value-contribution path { stroke: var(--purple); }
+.value-vector-label { font-size: 23px; fill: var(--purple) !important; }
+.value-weight-math { color: var(--blue); font-size: 30px; text-align: center; }
+.value-contribution-link { stroke: var(--purple); fill: none; }
+.value-sum-circle { fill: var(--bg); stroke: var(--purple); stroke-width: 2; }
+.value-sum-math { color: var(--purple); font-size: 38px; text-align: center; }
+.value-creature-label { font-size: 26px; }
+.value-creature-base { fill: #b4b6c41a; stroke: var(--muted); stroke-width: 2; }
+.value-creature-blue { fill: var(--blue); fill-opacity: .7; stroke: var(--blue); stroke-width: 2; }
+.value-creature-fur path { stroke: var(--blue); stroke-width: 3; stroke-linecap: round; }
+.value-creature-face circle { fill: var(--ink); }
+.value-creature-face path { fill: none; stroke: var(--ink); stroke-width: 3; stroke-linecap: round; }
+@media print {
+ .value-created, .value-weighted, .value-sum, .value-creature-blue, .value-creature-fur, .value-meaning { opacity: 1 !important; }
+ .value-coordinate { transform: none !important; }
+}

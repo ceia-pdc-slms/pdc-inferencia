@@ -1,0 +1,24 @@
+.mlp-slide { padding: 54px 84px; }
+.mlp-slide h2 { font-size: var(--font-slide-title); line-height: 1.1; letter-spacing: -.04em; }
+.mlp-slide h2 em { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; color: var(--blue); }
+.mlp-diagram { width: 100%; display: block; }
+.mlp-diagram text { font-family: Arial, Helvetica, sans-serif; text-anchor: middle; fill: var(--ink); }
+.mlp-token { font-size: 32px; }
+.mlp-stage-label { font-size: 28px; fill: var(--muted) !important; }
+.mlp-residual-label { font-size: 24px; fill: var(--blue) !important; }
+.mlp-input-vector rect, .mlp-output-vector rect { fill: var(--bg); stroke: var(--blue); stroke-width: 1.5; }
+.mlp-input-vector path, .mlp-output-vector path { stroke: var(--blue); }
+.mlp-expanded-vector rect { fill: #9a72d808; stroke: var(--purple); stroke-width: 1.5; }
+.mlp-expanded-vector path { stroke: var(--purple); }
+.mlp-input-vector path, .mlp-expanded-vector path, .mlp-output-vector path { stroke-width: 4; stroke-linecap: round; }
+.mlp-matrix { fill: #efa55d08; stroke: #efa55d; stroke-width: 1.5; }
+.mlp-matrix-math { color: #efa55d; font-size: 36px; text-align: center; }
+.mlp-function { fill: #9a72d808; stroke: var(--purple); stroke-width: 1.5; }
+.mlp-activation-math { color: var(--purple); font-size: 26px; text-align: center; }
+.mlp-arrow { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.mlp-bypass { fill: none; stroke: var(--blue); stroke-width: 1.5; stroke-linejoin: round; opacity: .55; }
+.mlp-sum { fill: var(--bg); stroke: var(--blue); stroke-width: 1.5; }
+.mlp-sum-math { color: var(--blue); font-size: 36px; text-align: center; }
+@media print {
+ .mlp-expansion, .mlp-activation, .mlp-projection, .mlp-residual { opacity: 1 !important; }
+}

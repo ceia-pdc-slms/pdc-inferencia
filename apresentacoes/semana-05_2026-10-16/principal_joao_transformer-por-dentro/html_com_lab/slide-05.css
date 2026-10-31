@@ -1,0 +1,33 @@
+.context-slide { padding: 64px 84px; }
+.context-slide h2 { font-size: var(--font-slide-title); line-height: 1.1; letter-spacing: -.04em; margin: 34px 0 24px; }
+.context-slide h2 em { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; color: var(--blue); }
+.context-lead { margin: 0; color: var(--muted); font-size: var(--font-body); line-height: 1.4; }
+.context-figure { margin: 24px 0 0; }
+.context-diagram { display: block; width: 100%; overflow: visible; }
+.context-diagram text { fill: var(--ink); font-family: Arial, Helvetica, sans-serif; text-anchor: middle; }
+.context-token text { font-size: 36px; }
+.context-source rect { stroke: var(--blue); fill: #58c4dd0a; stroke-width: 1.5; }
+.context-target rect { stroke: var(--yellow); fill: #f4ce720a; stroke-width: 1.5; }
+.context-target text { fill: var(--yellow); }
+.context-future { opacity: .3; }
+.context-small-vector rect { fill: var(--bg); stroke: var(--blue); stroke-width: 1.5; }
+.context-small-vector path { stroke: var(--blue); stroke-width: 4; stroke-linecap: round; }
+.context-target .context-small-vector rect { stroke: var(--yellow); }
+.context-target .context-small-vector path { stroke: var(--yellow); }
+.context-link { fill: none; stroke: var(--blue); }
+.context-secondary-link { stroke-width: 1.5; opacity: .16; }
+.context-main-link { stroke-width: 3; opacity: .85; }
+.context-large-vector rect { fill: var(--bg); stroke: var(--yellow); stroke-width: 1.5; }
+.context-coordinate { stroke: var(--yellow); stroke-width: 7; stroke-linecap: round; }
+.context-updated rect { stroke: var(--blue); }
+.context-updated .context-coordinate { stroke: var(--blue); }
+.context-vector-label { font-size: 30px; }
+.context-update-arrow { fill: none; stroke: var(--blue); stroke-width: 2; }
+.context-update-label { font-size: 28px; fill: var(--muted) !important; }
+.context-takeaway { border-top: 1px solid #b4b6c426; padding-top: 28px; margin: 26px 0 0; color: var(--muted); font-size: 30px; }
+.context-takeaway strong { color: var(--ink); font-weight: 400; }
+@media print {
+  .context-animation-layer { display: none !important; }
+  .context-updated, .context-link { opacity: 1 !important; transform: none !important; }
+  .context-updated .context-coordinate { transform: none !important; }
+}

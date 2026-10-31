@@ -1,0 +1,20 @@
+ .relu-slide { padding: 54px 84px; }
+.relu-slide h2 { font-size: var(--font-slide-title); line-height: 1.1; letter-spacing: -.04em; }
+.relu-slide h2 em { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; color: var(--blue); }
+.relu-diagram { width: 100%; display: block; }
+.relu-diagram text { font-family: Arial, Helvetica, sans-serif; text-anchor: middle; fill: var(--muted); }
+.relu-label { font-size: 28px; }
+.relu-axis, .relu-tick { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.relu-curve { fill: none; stroke: var(--purple); stroke-width: 5; stroke-linejoin: round; }
+.relu-guide { fill: none; stroke: var(--blue); stroke-width: 1.5; stroke-dasharray: 6 6; }
+.relu-point { fill: var(--blue); stroke: var(--bg); stroke-width: 2; }
+.relu-input { fill: #58c4dd08; stroke: var(--blue); stroke-width: 1.5; }
+.relu-output, .relu-function { fill: #9a72d808; stroke: var(--purple); stroke-width: 1.5; }
+.relu-matrix { fill: #efa55d08; stroke: #efa55d; stroke-width: 1.5; }
+.relu-math, .relu-tick-math, .relu-number, .relu-formula, .relu-function-math { text-align: center; color: var(--ink); font-size: 28px; }
+.relu-tick-math { font-size: 24px; }
+.relu-formula { font-size: 36px; color: var(--purple); }
+.relu-number { font-size: 40px; color: var(--blue); }
+.output-number, .relu-function-math { color: var(--purple); }
+.relu-function-math { font-size: 32px; }
+@media print { .relu-negatives, .relu-positives, .relu-location { opacity: 1 !important; } }

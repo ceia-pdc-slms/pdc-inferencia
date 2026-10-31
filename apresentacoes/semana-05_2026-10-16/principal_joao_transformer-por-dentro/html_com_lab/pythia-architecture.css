@@ -1,0 +1,38 @@
+.pythia-architecture-slide { padding: 54px 84px; }
+.pythia-architecture-slide h2 { font-size: var(--font-slide-title); line-height: 1.1; letter-spacing: -.04em; margin: 34px 0 30px; }
+.pythia-architecture-slide h2 em { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; color: var(--blue); }
+.pythia-architecture-slide figure { margin: 0; }
+.pythia-diagram { display: block; width: 100%; }
+.pythia-diagram text { font-family: Arial, Helvetica, sans-serif; text-anchor: middle; fill: var(--ink); }
+.pythia-label, .pythia-block-heading { font-size: 30px; }
+.pythia-caption { font-size: 26px; fill: var(--muted) !important; }
+.pythia-math { text-align: center; font-size: 30px; }
+.pythia-dimension, .pythia-caption-math { text-align: center; font-size: 28px; }
+.pythia-caption-math { color: var(--muted); }
+.pythia-state-math { text-align: center; font-size: 36px; }
+.pythia-arrow { fill: none; stroke: var(--muted); stroke-width: 1.7; }
+.pythia-detail-link { fill: none; stroke: #b4b6c455; stroke-width: 1.5; stroke-dasharray: 5 5; }
+.pythia-junction { fill: var(--muted); }
+.pythia-stack { fill: var(--bg); stroke: #b4b6c455; stroke-width: 1.5; }
+.pythia-block { fill: #58c4dd08; stroke: var(--blue); stroke-width: 1.5; }
+.pythia-matrix { fill: #efa55d08; stroke: #efa55d; stroke-width: 1.5; }
+.pythia-norm { fill: #ffffff03; stroke: #b4b6c477; stroke-width: 1.5; }
+.pythia-attention { fill: #58c4dd08; stroke: var(--blue); stroke-width: 1.5; }
+.pythia-mlp { fill: #9a72d808; stroke: var(--purple); stroke-width: 1.5; }
+.pythia-bypass { fill: none; stroke: var(--blue); stroke-width: 2; }
+.pythia-sum { fill: var(--bg); stroke: var(--blue); stroke-width: 2; }
+.pythia-diagram .pythia-blue { fill: var(--blue) !important; }
+.pythia-diagram .pythia-purple { fill: var(--purple) !important; }
+@media print { .pythia-overview, .pythia-branches, .pythia-residual { opacity: 1 !important; } }
+
+.pythia-property { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 24px; height: 100%; }
+.pythia-property .latex { font-size: 26px; }
+.pythia-count { text-align: center; font-size: 36px; }
+.pythia-number-label { font-size: 24px; fill: var(--muted) !important; }
+.pythia-metric, .pythia-context { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 24px; height: 100%; }
+.pythia-metric .latex { font-size: 28px; }
+.pythia-context { justify-content: flex-end; color: var(--muted); }
+.pythia-context .latex { font-size: 26px; }
+.pythia-diagram .pythia-overview-note { text-anchor: start; font-size: 24px; fill: var(--muted); }
+
+.count-inclusion-label{font-size:23px;color:var(--muted);line-height:1.25}

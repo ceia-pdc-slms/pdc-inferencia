@@ -1,0 +1,23 @@
+.activation-comparison-slide { padding: 54px 84px; }
+.activation-comparison-slide h2 { font-size: var(--font-slide-title); line-height: 1.1; letter-spacing: -.04em; }
+.activation-comparison-slide h2 em { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; color: var(--blue); }
+.activation-comparison-slide figure { margin: 30px 0 0; }
+.activation-comparison-diagram { width: 100%; display: block; }
+.activation-comparison-diagram text { font-family: Arial, Helvetica, sans-serif; fill: var(--muted); }
+.activation-heading { font-size: 36px; font-weight: 700; }
+.activation-label { font-size: 30px; }
+.activation-axis { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.activation-grid { fill: none; stroke: #b4b6c41a; stroke-width: 1; }
+.activation-relu-curve, .activation-gelu-curve { fill: none; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+.activation-relu-curve { stroke: var(--purple); }
+.activation-gelu-curve { stroke: var(--blue); stroke-dasharray: 10 8; }
+.activation-math, .activation-tick { font-size: 28px; text-align: center; }
+.activation-tick { font-size: 24px; color: var(--muted); }
+.activation-formula { font-size: 34px; }
+.activation-comparison-diagram .activation-purple { color: var(--purple); fill: var(--purple); }
+.activation-comparison-diagram .activation-blue { color: var(--blue); fill: var(--blue); }
+.activation-guide { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.activation-relu-point { fill: var(--purple); }
+.activation-gelu-point { fill: var(--blue); }
+@media print { .activation-gelu, .activation-example { opacity: 1 !important; } }
+

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
+  <title id="title">Capa dos slides Graphics Processing Unit</title>
+  <desc id="desc">Capa dos slides de Mathieu Léonardon, IMT Atlantique, com indicação de licença CC BY 4.0.</desc>
+  <rect width="1280" height="720" fill="#fff"/>
+  <rect x="18" y="43" width="1244" height="111" rx="11" fill="#07afd0"/>
+  <text x="640" y="113" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="49" font-style="italic" text-anchor="middle">Graphics Processing Unit</text>
+  <text x="640" y="239" fill="#101010" font-family="Arial,Helvetica,sans-serif" font-size="31" text-anchor="middle">Mathieu Léonardon</text>
+  <g fill="#08afd0" transform="translate(526 290)">
+    <path d="M0 0h66l-66 66z"/>
+    <path d="M66 0v66H0z" opacity=".72"/>
+    <path d="M68 0l32 32 32-32v66H68z"/>
+    <path d="M133 0h69l-69 66z"/>
+    <path d="M202 0v66h-69z" opacity=".72"/>
+  </g>
+  <text x="526" y="384" fill="#1e1e1e" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="700">IMT Atlantique</text>
+  <text x="526" y="407" fill="#222" font-family="Arial,Helvetica,sans-serif" font-size="17">Bretagne-Pays de la Loire</text>
+  <text x="526" y="428" fill="#222" font-family="Arial,Helvetica,sans-serif" font-size="17">École Mines-Télécom</text>
+  <text x="640" y="526" fill="#181818" font-family="Arial,Helvetica,sans-serif" font-size="21" text-anchor="middle">This course is mostly based on the course of Jukka Suomela from the Aalto university</text>
+  <text x="640" y="555" fill="#181818" font-family="Arial,Helvetica,sans-serif" font-size="21" text-anchor="middle">(https://ppc.cs.aalto.fi/), which is available under <tspan fill="#2479ab">CC BY 4.0</tspan> license.</text>
+  <text x="640" y="584" fill="#181818" font-family="Arial,Helvetica,sans-serif" font-size="21" text-anchor="middle">This course is also under <tspan fill="#2479ab">CC BY 4.0</tspan>.</text>
+  <rect x="0" y="691" width="426" height="29" fill="#00677d"/>
+  <rect x="426" y="691" width="428" height="29" fill="#078ca8"/>
+  <rect x="854" y="691" width="426" height="29" fill="#08afd0"/>
+  <text x="36" y="712" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="16">Mathieu Léonardon</text>
+  <text x="640" y="712" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="16" font-style="italic" text-anchor="middle">Graphics Processing Unit</text>
+  <text x="1246" y="712" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="16" text-anchor="end">1 / 129</text>
+</svg>
