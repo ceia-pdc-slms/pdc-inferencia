@@ -1,0 +1,121 @@
+:root {
+  --bg: #101117; --ink: #eeeef2; --muted: #b4b6c4;
+  --blue: #58c4dd; --purple: #9a72d8; --yellow: #f4ce72;
+  --font-title: 120px; --font-slide-title: 64px; --font-body: 32px; --font-caption: 22px;
+  font-family: Arial, Helvetica, sans-serif; color: var(--ink); background: var(--bg);
+}
+[hidden] { display: none !important; }
+* { box-sizing: border-box; }
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }
+#app { position: absolute; width: 1600px; height: 900px; transform-origin: top left; }
+[data-slide] { position: absolute; inset: 0; width: 1600px; height: 900px; overflow: hidden; background: var(--bg); }
+.home { display: grid; grid-template-columns: 1.15fr 1fr; align-items: center; gap: 48px; padding: 84px; }
+.home-inner { position: relative; z-index: 1; }
+.eyebrow { display: flex; align-items: center; gap: 15px; color: var(--blue); font-size: var(--font-caption); font-weight: 700; letter-spacing: .1em; }
+.eyebrow > span { width: 30px; height: 2px; background: var(--blue); }
+h1 { font-size: var(--font-title); line-height: 1.04; letter-spacing: -.055em; margin: 36px 0 24px; font-weight: 700; }
+h1 em, .intro-slide h2 em { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; color: var(--blue); letter-spacing: -.065em; }
+.accent { color: var(--yellow); }
+.home-subtitle { color: var(--muted); font-size: var(--font-body); line-height: 1.4; margin: 0; }
+.question { border-left: 2px solid var(--purple); padding-left: 22px; margin-top: 55px; }
+.question-label { color: var(--purple); font-size: var(--font-caption); letter-spacing: .06em; font-weight: 700; }
+.question p { margin: 12px 0 0; font-size: var(--font-body); line-height: 1.25; letter-spacing: -.025em; }
+.question strong { color: var(--yellow); font-weight: 500; }
+.home-visual { min-width: 0; margin: 32px 0 0; }
+.attention-diagram { display: block; width: 100%; height: auto; margin-top: 18px; }
+figcaption { text-align: center; color: var(--blue); font-size: var(--font-caption); padding-bottom: 15px; }
+.attention-diagram g[font-size="12"] { font-size: 20px; letter-spacing: 1px; }
+.katex { font-size: 1em; }
+.intro-slide { padding: 54px 84px 65px; }
+.intro-slide h2 { font-size: var(--font-slide-title); line-height: 1.1; letter-spacing: -.04em; margin: 34px 0 24px; }
+.intro-lead { font-size: var(--font-body); color: var(--muted); line-height: 1.4; margin: 0; }
+.intro-lead strong { color: var(--blue); font-weight: 500; }
+.intro-animation { margin: 66px 0 0; }
+.slide-animation, .animation-poster { display: block; width: 100%; height: 358px; object-fit: contain; background: var(--bg); }
+.animation-poster { display: none; }
+.intro-animation figcaption { color: var(--muted); margin-top: 36px; padding: 0; }
+.slide-controls { position: fixed; right: 28px; bottom: 20px; z-index: 10; display: flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid #b4b6c426; border-radius: 8px; background: #101117ee; }
+.slide-number { margin-left: 12px; color: var(--muted); font-size: var(--font-caption); font-variant-numeric: tabular-nums; letter-spacing: .06em; }
+.slide-controls button { width: 34px; height: 34px; border: 0; border-radius: 4px; background: transparent; color: var(--muted); font: 24px Arial, sans-serif; cursor: pointer; }
+.slide-controls button:hover:not(:disabled) { background: #58c4dd18; color: var(--blue); }
+.slide-controls button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.slide-controls button:disabled { opacity: .3; cursor: default; }
+#app.zoomed { cursor: grab; touch-action: none; user-select: none; }
+#app.dragging { cursor: grabbing; }
+.pdf-button { position: absolute; left: 84px; bottom: 36px; padding: 10px 18px; border: 1px solid #b4b6c440; border-radius: 8px; background: transparent; color: var(--muted); font: 24px Arial, sans-serif; cursor: pointer; }
+.pdf-button:hover { color: var(--blue); border-color: var(--blue); background: #58c4dd0a; }
+.pdf-button:focus-visible { outline: 2px solid var(--blue); outline-offset: 4px; }
+/* Área de conteúdo e margens comuns; a capa mantém sua composição própria. */
+[data-slide]:not(.home) { padding: 54px 84px; }
+[data-slide]:not(.home) h2 { margin: 28px 0 24px; }
+[data-slide]:not(.home) > figure { margin: 46px 0 0; }
+[data-slide].generation-slide > figure { margin-top: 105px; }
+[data-slide].embedding-slide > figure { margin-top: 112px; }
+[data-slide].architecture-slide > figure { margin-top: 90px; }
+[data-slide].context-slide > figure { margin-top: 78px; }
+[data-slide].example-slide > figure { margin-top: 56px; }
+[data-slide].query-slide > figure,
+[data-slide].key-slide > figure,
+[data-slide].value-slide > figure { margin-top: 24px; }
+[data-slide].query-slide .query-takeaway,
+[data-slide].pattern-slide .pattern-takeaway,
+[data-slide].value-slide .value-takeaway {
+  justify-content: center; padding-right: 0; border-top: 0; margin-top: 22px;
+}
+[data-slide] h2 .guide-question { display: block; font-family: Georgia, 'Times New Roman', serif; font-size: 44px; font-weight: 400; line-height: 1.2; letter-spacing: -.025em; color: var(--blue); margin-top: 8px; }
+@media print {
+  @page { size: 16.6667in 9.375in; margin: 0; }
+  :root { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  html, body { width: 1600px; height: auto; overflow: visible; }
+  #app { position: static; width: 1600px; height: auto; transform: none !important; }
+  [data-slide], [data-slide][hidden] { display: block !important; position: relative; break-after: page; }
+  [data-slide].home { display: grid !important; }
+  [data-slide]:last-child { break-after: auto; }
+  .cover-animation-layer, .tensor-animation-layer { display: none; }
+  .slide-animation, .slide-controls, .pdf-button { display: none !important; }
+  .animation-poster { display: block; }
+  [data-slide]::after { content: attr(data-page-label); position: absolute; right: 36px; bottom: 24px; color: var(--muted); font-size: var(--font-caption); }
+}
+
+.step-number { color: var(--muted); font-size: 16px; margin-left: 8px; padding-left: 14px; border-left: 1px solid #b4b6c426; font-variant-numeric: tabular-nums; }
+
+/* A caixa de matemática acompanha exatamente o círculo do gate de soma. */
+.sum-gate-math { width: 100%; height: 100%; display: grid; place-items: center; line-height: 1; }
+.sum-gate-math > .latex { display: block; }
+.sum-gate-math .katex { line-height: 1; }
+
+.home-button { position: fixed; top: 20px; right: 28px; z-index: 10; width: 36px; height: 36px; display: grid; place-items: center; padding: 0; border: 1px solid #b4b6c426; border-radius: 8px; background: #101117cc; color: #b4b6c499; cursor: pointer; }
+.home-button svg { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.home-button:hover { color: var(--blue); background: #58c4dd18; }
+.home-button:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; color: var(--blue); }
+@media print { .home-button { display: none !important; } }
+
+/* Acesso à página de experimentação, fora da sequência 16:9. */
+.lab-entry { display: inline-flex; align-items: center; gap: 12px; padding: 9px 16px; margin: 0 0 16px; border: 1px solid #9ae4cb70; border-radius: 8px; color: #9ae4cb; font-size: 17px; text-decoration: none; }
+.lab-entry:hover { background: #9ae4cb14; }
+.lab-entry:focus-visible { outline: 2px solid #9ae4cb; outline-offset: 4px; }
+@media print { .lab-entry { display: none; } }
+
+/* Controles de acesso, sem alterar a composição dos slides. */
+.cover-actions { position: absolute; left: 84px; bottom: 36px; display: flex; align-items: center; gap: 16px; }
+.cover-actions .pdf-button { position: static; }
+.cover-lab-button { display: inline-flex; gap: 12px; align-items: center; padding: 10px 18px; border: 1px solid #58c4dd60; border-radius: 8px; background: #58c4dd08; color: var(--blue); font: 24px Arial, sans-serif; text-decoration: none; }
+.cover-lab-button:hover { background: #58c4dd18; border-color: var(--blue); }
+.cover-lab-button:focus-visible { outline: 2px solid var(--blue); outline-offset: 4px; }
+.presentation-menu-toggle { position: fixed; top: 20px; right: 76px; z-index: 10; width: 36px; height: 36px; display: grid; place-items: center; padding: 0; border: 1px solid #b4b6c426; border-radius: 8px; background: #101117cc; color: #b4b6c499; cursor: pointer; }
+.presentation-menu-toggle svg { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+.presentation-menu-toggle:hover { color: var(--blue); background: #58c4dd18; }
+.presentation-menu-toggle:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+.presentation-menu { width: min(550px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); padding: 24px; border: 1px solid #3a4254; border-radius: 16px; background: #181c27; color: var(--ink); }
+.presentation-menu::backdrop { background: #080b14bb; backdrop-filter: blur(7px); }
+.presentation-menu-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding-bottom: 18px; }
+.presentation-menu-heading p { color: var(--muted); letter-spacing: .15em; font-size: 10px; margin: 0 0 9px; }
+.presentation-menu-heading h2 { font-size: 23px; font-weight: 400; margin: 0; }
+.presentation-menu-heading button { width: 36px; height: 36px; flex-shrink: 0; background: transparent; border: 1px solid #b4b6c426; border-radius: 8px; color: var(--muted); font-size: 18px; cursor: pointer; }
+#presentationMenuLinks { display: grid; gap: 4px; }
+#presentationMenuLinks a { display: flex; align-items: center; gap: 15px; padding: 10px 12px; border: 1px solid transparent; border-radius: 8px; color: var(--muted); font-size: 15px; line-height: 1.35; text-decoration: none; }
+#presentationMenuLinks a:hover, #presentationMenuLinks a[aria-current="page"] { background: #58c4dd10; color: var(--blue); border-color: #58c4dd30; }
+.presentation-menu-number { font-size: 11px; min-width: 18px; font-variant-numeric: tabular-nums; }
+.presentation-menu-lab { display: flex; align-items: center; justify-content: space-between; margin-top: 18px; padding: 12px; border: 1px solid #9ae4cb50; border-radius: 8px; color: #9ae4cb; font-size: 15px; text-decoration: none; }
+.presentation-menu a:focus-visible, .presentation-menu button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+@media print { .cover-actions, .presentation-menu-toggle, .presentation-menu { display: none !important; } }

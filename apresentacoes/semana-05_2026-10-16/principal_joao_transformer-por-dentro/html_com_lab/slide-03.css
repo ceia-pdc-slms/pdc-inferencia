@@ -1,0 +1,28 @@
+.embedding-slide { padding: 64px 84px; }
+.embedding-slide h2 { font-size: var(--font-slide-title); line-height: 1.1; letter-spacing: -.04em; margin: 34px 0 24px; }
+.embedding-slide h2 em { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; color: var(--blue); }
+.embedding-lead { margin: 0; color: var(--muted); font-size: var(--font-body); line-height: 1.4; }
+.embedding-figure { margin: 26px 0 0; }
+.embedding-diagram { display: block; width: 100%; overflow: visible; }
+.embedding-diagram text { fill: var(--ink); font-family: Arial, Helvetica, sans-serif; font-size: 30px; }
+.embedding-label { fill: var(--muted) !important; }
+.output-label, .vector-token, .vector-value, .embedding-dim { text-anchor: middle; }
+.embedding-token rect { fill: #58c4dd08; stroke: var(--blue); stroke-width: 1.5; }
+.embedding-diagram .token-word { font-size: 36px; }
+.embedding-diagram .token-id { text-anchor: end; fill: var(--muted); font-size: 28px; }
+.embedding-row rect { fill: #f4ce7206; stroke: #f4ce7244; stroke-width: 1; }
+.embedding-diagram .table-id, .embedding-learned { fill: var(--yellow); }
+.table-value { text-anchor: middle; }
+.embedding-diagram .vector-value { fill: var(--blue); font-size: 34px; }
+.vector-bracket { fill: none; stroke: var(--blue); stroke-width: 2; }
+.embedding-link { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.embedding-diagram .embedding-learned { fill: var(--yellow); text-anchor: middle; font-size: 28px; }
+.embedding-diagram .embedding-dim { color: var(--muted); font-size: 28px; margin: 0; text-align: center; line-height: 1.6; }
+.embedding-figure figcaption { color: var(--muted); font-size: 26px; text-align: left; padding: 0; }
+.embedding-takeaway { border-top: 1px solid #b4b6c426; padding-top: 28px; margin: 32px 0 0; color: var(--muted); font-size: 30px; }
+.embedding-highlight { fill: #f4ce720c; stroke: var(--yellow); stroke-width: 3; }
+.embedding-transfer { fill: var(--blue) !important; text-anchor: middle; font-size: 34px !important; }
+@media print {
+  .embedding-animation-layer { display: none !important; }
+  .embedding-token, .embedding-output, .embedding-row { opacity: 1 !important; transform: none !important; }
+}

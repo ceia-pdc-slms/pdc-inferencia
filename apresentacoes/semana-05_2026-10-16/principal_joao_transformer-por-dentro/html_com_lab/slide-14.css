@@ -1,0 +1,17 @@
+.params-slide { padding: 54px 84px; }
+.params-slide h2 { font-size: var(--font-slide-title); line-height: 1.1; letter-spacing: -.04em; }
+.params-slide h2 em { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; color: var(--blue); }
+.params-diagram { display: block; width: 100%; }
+.params-diagram text { font-family: Arial, Helvetica, sans-serif; fill: var(--ink); text-anchor: middle; }
+.params-label { font-size: 30px; }
+.params-block-label { font-size: 32px; }
+.params-reuse-label, .params-condition { font-size: 26px; fill: var(--muted) !important; }
+.params-block { fill: #ffffff02; stroke: #b4b6c466; stroke-width: 1.5; }
+.params-stack { fill: var(--bg); stroke: #b4b6c433; stroke-width: 1.5; }
+.params-arrow { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.params-divider { stroke: #b4b6c433; stroke-width: 1; }
+.params-matrix, .params-norm-vector { fill: #efa55d08; stroke: #efa55d; stroke-width: 1.5; }
+.params-grid { fill: none; stroke: #efa55d; stroke-width: 1; opacity: .28; }
+.params-cell, .params-norm-cell { fill: #efa55d; }
+.params-math { text-align: center; font-size: 36px; color: #efa55d; background: var(--bg); width: max-content; margin: auto; padding: 0 7px; }
+@media print { .params-embedding, .params-attention, .params-mlp, .params-output, .params-extra { opacity: 1 !important; } }

@@ -1,0 +1,26 @@
+.architecture-slide h2 { font-size: var(--font-slide-title); line-height: 1.1; letter-spacing: -.04em; }
+.architecture-slide h2 em { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; color: var(--blue); }
+[data-slide].architecture-slide > figure { margin: 46px 0 0; }
+.architecture-diagram { display: block; width: 100%; height: auto; }
+.architecture-diagram text { fill: var(--ink); font-family: Arial, Helvetica, sans-serif; text-anchor: middle; }
+.architecture-label { font-size: 34px; }
+.architecture-caption { font-size: 28px; fill: var(--muted) !important; }
+.architecture-block { fill: none; stroke: #b4b6c433; stroke-width: 1.5; }
+.attention-panel { fill: #58c4dd08; stroke: var(--blue); stroke-width: 2; }
+.mlp-panel { fill: #9a72d808; stroke: var(--purple); stroke-width: 2; }
+.architecture-diagram .attention-label { fill: var(--blue); }
+.architecture-diagram .mlp-label { fill: var(--purple); }
+.architecture-mixing { fill: none; stroke: var(--blue); stroke-width: 2; opacity: .8; }
+.architecture-independent { fill: var(--bg); stroke: var(--purple); stroke-width: 2; }
+.architecture-arrow { fill: none; stroke: var(--muted); stroke-width: 2; }
+.architecture-arrow.attention-arrow { stroke: var(--blue); }
+.architecture-arrow.mlp-arrow { stroke: var(--purple); }
+.architecture-arrow.residual-arrow { stroke: var(--yellow); }
+.architecture-junction { fill: var(--muted); }
+.architecture-vector { fill: var(--bg); stroke: var(--blue); stroke-width: 1.5; }
+.architecture-coordinate { stroke: var(--blue); stroke-width: 4; stroke-linecap: round; }
+.architecture-sum { fill: var(--bg); stroke: var(--yellow); stroke-width: 2; }
+.architecture-sum-math { color: var(--yellow); font-size: 38px; }
+@media print {
+  .architecture-entry, .architecture-branches, .architecture-result { opacity: 1 !important; }
+}

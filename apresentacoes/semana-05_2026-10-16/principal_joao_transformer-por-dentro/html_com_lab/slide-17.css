@@ -1,0 +1,17 @@
+.closing-slide { padding: 54px 84px; }
+[data-slide].closing-slide h2 { font-size: 112px; line-height: 1.1; letter-spacing: -.04em; margin: 28px 0 0; }
+.closing-slide h2 em { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; color: var(--blue); }
+.closing-materials { margin-top: 90px; }
+.closing-materials h3 { margin: 0 0 38px; font-size: 36px; font-weight: 400; color: var(--muted); }
+.closing-materials h3 span { color: var(--ink); }
+.closing-video-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 30px; }
+.closing-video { --study-color: var(--blue); height: 355px; padding: 32px; display: flex; flex-direction: column; border: 1px solid #b4b6c43d; border-top: 3px solid var(--study-color); border-radius: 12px; background: #ffffff02; }
+.closing-green { --study-color: #7ac894; }
+.closing-purple { --study-color: var(--purple); }
+.closing-chapter { margin: 0; font-size: 22px; letter-spacing: .09em; color: var(--muted); }
+.closing-video h4 { margin: 24px 0 22px; font-size: 42px; font-weight: 500; color: var(--study-color); }
+.closing-video-title { margin: 0; font-size: 28px; line-height: 1.35; color: var(--ink); }
+.closing-video a { margin-top: auto; width: fit-content; font-size: 26px; color: var(--study-color); text-decoration: none; padding: 6px 0; }
+.closing-video a:hover { text-decoration: underline; text-underline-offset: 6px; }
+.closing-video a:focus-visible { outline: 2px solid var(--study-color); outline-offset: 7px; border-radius: 2px; }
+@media print { .closing-video a { text-decoration: underline; text-underline-offset: 4px; } }

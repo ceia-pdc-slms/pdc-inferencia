@@ -1,0 +1,35 @@
+.key-slide { padding: 54px 84px; }
+.key-slide h2 { font-size: var(--font-slide-title); line-height: 1.1; letter-spacing: -.04em; margin: 28px 0 24px; }
+.key-figure { margin: 38px 0 0; }
+.key-diagram { width: 100%; display: block; }
+.key-diagram text { font-family: Arial, Helvetica, sans-serif; fill: var(--ink); text-anchor: middle; }
+.key-sentence text { font-size: 36px; }
+.key-sentence rect { fill: #f4ce720a; stroke: var(--yellow); stroke-width: 1.5; }
+.key-target { fill: var(--yellow) !important; }
+.key-query-label { fill: var(--yellow) !important; font-size: 30px; }
+.key-key-label { fill: #82c995 !important; font-size: 30px; }
+.key-pair-frame { fill: #b4b6c404; stroke: #b4b6c426; stroke-width: 1; }
+.key-word { font-size: 36px; }
+.key-stage-label { font-size: 28px; fill: var(--muted) !important; }
+.key-input rect { fill: var(--bg); stroke: var(--blue); stroke-width: 1.5; }
+.key-input path { stroke: var(--blue); }
+.key-output rect { fill: var(--bg); stroke: #82c995; stroke-width: 1.5; }
+.key-output path { stroke: #82c995; }
+.key-query-block rect { fill: var(--bg); stroke: var(--yellow); stroke-width: 1.5; }
+.key-query-block path { stroke: var(--yellow); }
+.key-input path, .key-output path, .key-query-block path { stroke-width: 4; stroke-linecap: round; }
+.key-matrix { fill: #efa55d0a; stroke: #efa55d; stroke-width: 1.5; }
+.key-matrix-math { color: #efa55d; font-size: 32px; text-align: center; }
+.key-math { color: var(--ink); font-size: 54px; text-align: center; }
+.key-arrow { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.key-key-link { fill: none; stroke: #82c995; stroke-width: 2; }
+.key-query-link { fill: none; stroke: var(--yellow); stroke-width: 1.5; }
+.key-product { fill: var(--bg); stroke: #82c995; stroke-width: 1.5; }
+.key-score-card { fill: var(--bg); stroke: #82c995; stroke-width: 1.5; }
+.key-score-math { color: #82c995; font-size: 42px; text-align: center; }
+@media print {
+ .key-projection, .key-comparison, .key-score, .key-projection-equation, .key-score-equation { opacity: 1 !important; }
+}
+
+.key-low .key-score-card { stroke: #efa55d; }
+.key-low .key-score-math { color: #efa55d; }

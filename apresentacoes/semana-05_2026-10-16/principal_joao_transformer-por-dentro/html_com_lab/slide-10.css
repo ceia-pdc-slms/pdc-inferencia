@@ -1,0 +1,39 @@
+.example-slide { padding: 54px 84px; }
+.example-slide h2 { font-size: var(--font-slide-title); line-height: 1.1; letter-spacing: -.04em; margin: 28px 0 24px; }
+.example-slide h2 em { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; color: var(--blue); }
+.example-lead { margin: 0; color: var(--muted); font-size: var(--font-body); line-height: 1.4; }
+.example-figure { margin: 22px 0 0; }
+.example-diagram { width: 100%; display: block; }
+.example-diagram text { font-family: Arial, Helvetica, sans-serif; fill: var(--ink); text-anchor: middle; }
+.example-token text { font-size: 36px; }
+.example-source rect { fill: #58c4dd0a; stroke: var(--blue); stroke-width: 1.5; }
+.example-target rect { fill: #f4ce720a; stroke: var(--yellow); stroke-width: 1.5; }
+.example-target text { fill: var(--yellow); }
+.example-future { opacity: .3; }
+.example-key { fill: var(--bg); stroke: #82c995; stroke-width: 1.5; }
+.example-key-coordinate { stroke: #82c995; stroke-width: 3; stroke-linecap: round; }
+.example-query rect { fill: var(--bg); stroke: var(--yellow); stroke-width: 1.5; }
+.example-query path { stroke: var(--yellow); stroke-width: 3; }
+.example-query-label { fill: var(--yellow) !important; font-size: 25px; }
+.example-comparison path { stroke: var(--yellow); stroke-width: 1.5; fill: none; opacity: .4; }
+.example-compare-1 path { stroke-width: 3; opacity: .9; }
+.example-label { font-size: 28px; fill: var(--muted) !important; }
+.example-math { text-align: center; color: var(--ink); font-size: 28px; }
+.example-values rect { fill: var(--bg); stroke: var(--purple); stroke-width: 1.5; }
+.example-value-coordinate { stroke: var(--purple); stroke-width: 3; stroke-linecap: round; }
+.example-value-link { fill: none; stroke: var(--purple); opacity: .35; }
+.example-value-1 .example-value-link { opacity: 1; }
+.example-sum { fill: var(--bg); stroke: var(--purple); stroke-width: 1.5; }
+.example-arrow { stroke: var(--muted); stroke-width: 1.5; fill: none; }
+.example-result-label { font-size: 30px; fill: var(--blue) !important; }
+.example-result-vector rect { fill: var(--bg); stroke: var(--blue); stroke-width: 2; }
+.example-result-coordinate { stroke: var(--blue); stroke-width: 5; stroke-linecap: round; }
+.example-caption { border-top: 1px solid #b4b6c426; padding-top: 22px; margin-top: 18px; display: grid; }
+.example-step { grid-area: 1 / 1; font-size: 28px; color: var(--muted); margin: 0; opacity: 0; }
+.example-step-final { opacity: 1; }
+@media print {
+ .example-query, .example-keys, .example-comparison, .example-weights, .example-values, .example-update { opacity: 1 !important; }
+ .example-step { opacity: 0 !important; }
+ .example-step-final { opacity: 1 !important; }
+ .example-result-coordinate, .example-value-coordinate { transform: none !important; }
+}

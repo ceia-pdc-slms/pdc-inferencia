@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101117"><title>Pythia-1B · Por dentro do modelo</title>
+<link rel="stylesheet" href="../vendor/katex/katex.min.css"><link rel="stylesheet" href="laboratorio.css"><link rel="stylesheet" href="arquitetura.css">
+<script defer src="../vendor/katex/katex.min.js"></script><script defer src="detalhes.js"></script><script defer src="arquitetura.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#componentTitle">Ir para a etapa atual</a>
+<header class="topbar"><a href="../index.html#slide-21" class="brand">Transformer <span>/ laboratório</span></a><a href="../index.html#slide-18">Voltar aos slides</a></header>
+<main>
+<section id="architectureView" aria-labelledby="architectureTitle">
+ <header class="architecture-heading"><div><p class="eyebrow">Explore o caminho de um token</p><h1 id="architectureTitle">Por dentro do Pythia-1B</h1></div></header>
+ <div id="architectureSpecs" class="architecture-specs"></div>
+ <nav id="architectureBreadcrumb" class="architecture-breadcrumb" aria-label="Localização na arquitetura"></nav>
+ <div id="architectureWorkspace" class="architecture-workspace"><div class="architecture-stage"><svg id="architectureCanvas" viewBox="0 0 1000 580" tabindex="0" role="group" aria-label="Arquitetura em três dimensões. Arraste para girar. A, D, W e S giram; mais e menos ajustam o zoom; zero restaura a vista."><title>Arquitetura interativa do Pythia-1B</title></svg><div class="camera-tools" aria-label="Câmera"><button id="cameraFront">Vista frontal</button><button id="cameraReset" aria-label="Restaurar perspectiva">Restaurar</button><button id="cameraOut" aria-label="Afastar câmera">−</button><button id="cameraIn" aria-label="Aproximar câmera">+</button></div><p class="orbit-hint">Arraste para girar · selecione um componente</p></div>
+ <aside id="componentPanel" class="component-panel" aria-label="Detalhes do componente" hidden><div id="detailInspector"></div><div id="detailContent"></div></aside></div>
+ <div id="inspectorHome"><section class="architecture-inspector" aria-labelledby="componentTitle"><div class="component-heading"><h2 id="componentTitle" tabindex="-1"></h2><span id="architecturePosition" aria-label="Etapa atual"></span></div><p id="componentDescription"></p><div id="componentEquation"></div><div class="component-actions"><button id="openComponent">Abrir bloco</button><a id="reviewSlide" target="_blank" rel="noopener">Rever nos slides</a></div></section>
+ </div>
+ <nav class="architecture-transport" aria-label="Percurso da inferência"><button id="architectureBack">Voltar</button><span id="architectureStatus" class="sr-only" role="status" aria-live="polite"></span><button id="architectureNext" class="primary">Seguir o fluxo</button></nav>
+ <details class="model-details"><summary>Dimensões e parâmetros do modelo</summary><div id="modelDimensions"></div><p>O mapa percorre a arquitetura completa e suas operações. Os pesos treinados não são carregados nesta página.</p></details>
+</section>
+<footer><span>Pythia-1B · exploração local</span><span>← → percorrer as etapas</span></footer>
+</main>
+</body>
+</html>
