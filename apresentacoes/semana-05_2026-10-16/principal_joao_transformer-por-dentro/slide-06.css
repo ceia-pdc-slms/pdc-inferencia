@@ -1,0 +1,34 @@
+.query-slide { padding: 54px 84px; }
+.query-slide h2 { font-size: var(--font-slide-title); line-height: 1.1; letter-spacing: -.04em; margin: 28px 0 24px; }
+.query-slide h2 em { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; color: var(--blue); }
+.query-lead { margin: 0; color: var(--muted); font-size: var(--font-body); line-height: 1.4; }
+.query-figure { margin: 18px 0 0; }
+.query-diagram { width: 100%; display: block; }
+.query-diagram text { font-family: Arial, Helvetica, sans-serif; fill: var(--ink); text-anchor: middle; }
+.query-sentence text { font-size: 36px; }
+.query-token-highlight { fill: #f4ce720a; stroke: var(--yellow); stroke-width: 1.5; }
+.query-token-selected { fill: var(--yellow) !important; }
+.query-sentence .query-translation { font-size: 23px; fill: var(--muted); }
+.query-origin-link { fill: none; stroke: var(--blue); stroke-width: 1.5; opacity: .5; }
+.query-label { font-size: 28px; }
+.query-input-vector rect { fill: var(--bg); stroke: var(--blue); stroke-width: 2; }
+.query-input-vector path { stroke: var(--blue); stroke-width: 5; stroke-linecap: round; }
+.query-arrow { fill: none; stroke: var(--muted); stroke-width: 2; }
+.query-matrix { fill: #efa55d0a; stroke: #efa55d; stroke-width: 2; }
+.query-matrix-grid { stroke: #efa55d; stroke-width: 1; opacity: .15; }
+.query-math { text-align: center; font-size: 40px; color: var(--ink); }
+.query-input-symbol { color: var(--blue); }
+.query-matrix-symbol { color: #efa55d; }
+.query-parameter-label { fill: #efa55d !important; font-size: 28px; }
+.query-output-vector rect { fill: var(--bg); stroke: var(--yellow); stroke-width: 2; }
+.query-output-vector path { stroke: var(--yellow); stroke-width: 5; stroke-linecap: round; }
+.query-result-label, .query-output-symbol { color: var(--yellow); fill: var(--yellow) !important; }
+.query-question text { font-size: 34px; fill: var(--yellow); }
+.query-takeaway { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #b4b6c426; padding-top: 12px; padding-right: 200px; margin: 18px 0 0; }
+.query-takeaway p { font-size: 28px; color: var(--muted); margin: 0; }
+.query-equation { font-size: 42px; color: var(--blue); }
+@media print {
+ .query-source, .query-origin-link, .query-result, .query-question, .query-takeaway { opacity: 1 !important; }
+ .query-output-vector { transform: translate(1055px, 215px) !important; }
+ .query-moving-vector { display: none !important; }
+}

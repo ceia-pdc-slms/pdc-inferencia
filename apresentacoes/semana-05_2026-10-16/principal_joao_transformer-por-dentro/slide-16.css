@@ -1,0 +1,22 @@
+.disk-slide { padding: 54px 84px; }
+.disk-slide h2 { font-size: var(--font-slide-title); line-height: 1.1; letter-spacing: -.04em; }
+.disk-slide h2 em { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; color: var(--blue); }
+.disk-diagram { display: block; width: 100%; }
+.disk-diagram text { font-family: Arial, Helvetica, sans-serif; fill: var(--ink); text-anchor: middle; }
+.disk-label { font-size: 28px; fill: var(--muted) !important; }
+.disk-row-label { font-size: 30px; text-anchor: start !important; }
+.disk-file-name { font-family: monospace !important; font-size: 29px; }
+.disk-parameter-card { fill: #efa55d08; stroke: #efa55d; stroke-width: 1.5; }
+.disk-weight-card { fill: #58c4dd08; stroke: var(--blue); stroke-width: 1.5; }
+.disk-total-card { fill: #f4ce7208; stroke: var(--yellow); stroke-width: 1.5; }
+.disk-arrow { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.disk-file-icon { fill: none; stroke: var(--yellow); stroke-width: 2; stroke-linejoin: round; }
+.disk-math, .disk-parameter-number, .disk-factor, .disk-weight-number, .disk-gigabytes, .disk-plus, .disk-buffer-number, .disk-header-number, .disk-total-number { color: var(--ink); text-align: center; font-size: 36px; }
+.disk-parameter-number { color: #efa55d; font-size: 40px; }
+.disk-factor { font-size: 46px; }
+.disk-weight-number { color: var(--blue); font-size: 42px; }
+.disk-gigabytes, .disk-total-number { color: var(--yellow); font-size: 42px; }
+.disk-buffer-number { color: var(--purple); }
+.disk-header-number { color: #efa55d; }
+.disk-plus { color: var(--muted); }
+@media print { .disk-weights, .disk-file, .disk-total, .disk-overhead { opacity: 1 !important; } }

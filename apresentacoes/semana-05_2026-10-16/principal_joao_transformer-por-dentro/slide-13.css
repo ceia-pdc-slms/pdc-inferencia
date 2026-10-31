@@ -1,0 +1,23 @@
+.output-slide { padding: 54px 84px; }
+.output-slide h2 { font-size: var(--font-slide-title); line-height: 1.1; letter-spacing: -.04em; }
+.output-slide h2 em { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; color: var(--blue); }
+.output-diagram { display: block; width: 100%; }
+.output-diagram text { font-family: Arial, Helvetica, sans-serif; fill: var(--ink); text-anchor: middle; }
+.output-stage-label, .output-last-label, .output-softmax-label { font-size: 28px; fill: var(--muted) !important; }
+.output-token, .output-candidate { font-size: 32px; }
+.output-candidate { text-anchor: end !important; }
+.output-prefix, .output-appended { font-size: 42px; }
+.output-appended { fill: var(--yellow) !important; }
+.output-vector rect { fill: #58c4dd08; stroke: var(--blue); stroke-width: 1.5; }
+.output-vector path { stroke: var(--blue); stroke-width: 4; stroke-linecap: round; }
+.output-selected, .output-choice-outline { fill: #f4ce7208; stroke: var(--yellow); stroke-width: 1.5; }
+.output-arrow { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.output-matrix { fill: #efa55d08; stroke: #efa55d; stroke-width: 1.5; }
+.output-grid { fill: none; stroke: #efa55d; stroke-width: 1; opacity: .22; }
+.output-math, .output-weight-math, .output-score-math, .output-probability-math { text-align: center; font-size: 30px; color: var(--ink); }
+.output-weight-math { font-size: 34px; color: #efa55d; background: var(--bg); width: max-content; margin: auto; padding: 0 8px; }
+.output-probability-math { color: var(--blue); }
+.output-track { fill: #58c4dd0c; }
+.output-bar { fill: var(--blue); transform-box: fill-box; transform-origin: left center; }
+.output-return { fill: none; stroke: var(--yellow); stroke-width: 2; }
+@media print { .output-selection, .output-logits, .output-probabilities, .output-choice { opacity: 1 !important; } .output-bar { transform: none !important; } .output-return { stroke-dashoffset: 0 !important; } }

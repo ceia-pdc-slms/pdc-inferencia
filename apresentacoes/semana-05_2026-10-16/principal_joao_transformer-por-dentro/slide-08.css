@@ -1,0 +1,40 @@
+.pattern-slide { padding: 54px 84px; }
+.pattern-slide h2 { font-size: var(--font-slide-title); line-height: 1.1; letter-spacing: -.04em; margin: 28px 0 24px; }
+.pattern-slide h2 em { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; color: var(--blue); }
+.pattern-diagram { width: 100%; display: block; }
+.pattern-diagram text { font-family: Arial, Helvetica, sans-serif; fill: var(--ink); text-anchor: middle; }
+.pattern-axis { font-size: 28px; fill: var(--muted) !important; }
+.pattern-column, .pattern-token { font-size: 32px; }
+.pattern-diagram .pattern-token { text-anchor: end; }
+.pattern-diagram .pattern-target { fill: var(--yellow); }
+.pattern-cell { fill: transparent; stroke: #b4b6c440; stroke-width: 1; }
+.pattern-strength { fill: var(--blue); }
+.pattern-masked { fill: #b4b6c416; }
+.pattern-number { text-align: center; font-size: 34px; color: var(--blue); }
+.pattern-zero { color: #b4b6c480; }
+.pattern-small { font-size: 29px; color: #efa55d; }
+.pattern-focus { fill: none; stroke: var(--yellow); stroke-width: 2; pointer-events: none; }
+.pattern-diagram .pattern-legend { text-anchor: start; font-size: 26px; fill: var(--muted); }
+.pattern-takeaway { display: flex; align-items: center; justify-content: center; gap: 45px; font-size: 32px; color: var(--blue); }
+.pattern-softmax-label { font-size: 28px; color: var(--muted); }
+@media print {
+ .pattern-column-values, .pattern-focus { opacity: 1 !important; }
+}
+
+.pattern-score { text-align: center; font-size: 24px; color: var(--muted); }
+.pattern-diagram .pattern-column-guide { font-size: 22px; fill: var(--muted); }
+
+.pattern-probability-arrow { flex: 0 0 auto; }
+.pattern-probability-arrow path { fill: none; stroke: var(--blue); stroke-width: 2; }
+
+.pattern-mask-score { color: #b4b6c480; }
+
+.pattern-query-header { fill: #f4ce7206; stroke: #f4ce7270; stroke-width: 1.5; }
+.pattern-query-selected { stroke: var(--yellow); fill: #f4ce7214; }
+.pattern-diagram .pattern-query-axis { fill: var(--yellow); font-size: 28px; }
+.pattern-query-direction { stroke: var(--yellow); stroke-width: 1.5; fill: none; }
+.pattern-key-header { fill: #82c99508; stroke: #82c99580; stroke-width: 1.5; }
+.pattern-diagram .pattern-token, .pattern-diagram .pattern-key-axis { fill: #82c995; }
+.pattern-key-axis { font-size: 30px; }
+.pattern-axis-explanation { font-size: 24px; fill: var(--muted) !important; }
+.pattern-key-direction, .pattern-key-bracket { stroke: #82c995; stroke-width: 1.5; fill: none; }

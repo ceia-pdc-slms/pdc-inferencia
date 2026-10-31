@@ -1,0 +1,33 @@
+/* Slide 2: ciclo de geração, sem arquitetura específica. */
+.generation-slide { padding: 64px 84px; }
+.generation-slide h2 { font-size: var(--font-slide-title); line-height: 1.1; letter-spacing: -.04em; margin: 34px 0 24px; }
+.generation-slide h2 em { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; color: var(--blue); }
+.generation-lead { margin: 0; font-size: var(--font-body); color: var(--muted); line-height: 1.4; }
+.generation-figure { margin: 35px 0 0; }
+.generation-diagram { width: 100%; display: block; overflow: visible; }
+.generation-diagram text { font-family: Arial, Helvetica, sans-serif; fill: var(--ink); }
+.stage-label { font-size: 30px; fill: var(--muted) !important; }
+.input-card { fill: #58c4dd06; stroke: var(--blue); stroke-width: 1.5; }
+.model-card { fill: #9a72d80d; stroke: var(--purple); stroke-width: 2; }
+.model-label { font-size: 38px; text-anchor: middle; }
+.prefix-text { font-size: 42px; }
+.appended-token { fill: var(--yellow) !important; }
+.appended-period { opacity: 0; }
+.forward-path { fill: none; stroke: var(--muted); stroke-width: 2; }
+.return-path { fill: none; stroke: var(--yellow); stroke-width: 2; opacity: .6; }
+.return-label { text-anchor: middle; font-size: 32px; fill: var(--yellow) !important; }
+.candidate, .probability-value { font-size: 32px; }
+.probability-value { text-anchor: end; fill: var(--muted) !important; }
+.probability-bar { fill: var(--blue); opacity: .75; }
+.distribution-second { opacity: 0; }
+.model-highlight { fill: none; stroke: var(--purple); stroke-width: 4; opacity: 0; }
+.chosen-highlight { fill: #f4ce7208; stroke: var(--yellow); stroke-width: 2; }
+.flying-token { opacity: 0; }
+.flying-token rect { fill: var(--bg); stroke: var(--yellow); stroke-width: 2; }
+.flying-token text { font-size: 38px; fill: var(--yellow); }
+.generation-figure figcaption { font-size: 26px; color: var(--muted); text-align: left; padding: 0; margin-top: 12px; }
+@media print {
+  .generation-diagram *, .generation-diagram { animation: none !important; }
+  .distribution-first, .appended-milk, .chosen-highlight { opacity: 1 !important; }
+  .distribution-second, .appended-period, .flying-token, .model-highlight { display: none !important; }
+}

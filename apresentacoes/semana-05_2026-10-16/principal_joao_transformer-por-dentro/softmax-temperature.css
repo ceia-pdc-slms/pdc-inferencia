@@ -1,0 +1,37 @@
+.temperature-slide { padding: 54px 84px; }
+.temperature-slide h2 { margin: 34px 0 24px; font-size: var(--font-slide-title); line-height: 1.1; letter-spacing: -.04em; }
+.temperature-slide h2 em { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; color: var(--blue); }
+.temperature-slide figure { margin: 0; }
+.temperature-diagram { display: block; width: 100%; }
+.temperature-diagram text { font-family: Arial, Helvetica, sans-serif; fill: var(--muted); }
+.temperature-operation { font-size: 28px; text-anchor: middle; }
+.temperature-caption { font-size: 27px; text-anchor: middle; }
+.temperature-token { font-size: 32px; fill: var(--ink) !important; }
+.temperature-logits-label { font-size: 28px; text-anchor: middle; }
+.temperature-math { font-size: 32px; text-align: center; }
+.temperature-heading-math { font-size: 36px; text-align: center; }
+.temperature-probability { font-size: 30px; text-align: right; }
+.temperature-caption-math { font-size: 24px; text-align: center; color: var(--muted); }
+.temperature-arrow { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.temperature-track { fill: #ffffff06; stroke: #b4b6c433; stroke-width: 1; }
+.temperature-cold { color: var(--yellow); }
+.temperature-base { color: var(--blue); }
+.temperature-warm { color: var(--purple); }
+.temperature-bar { fill: currentColor; }
+@media print { .temperature-calculation, .temperature-cold, .temperature-base, .temperature-warm { opacity: 1 !important; } }
+@media print { .temperature-bar { transform: none !important; } }
+
+.temperature-intro { font-size: 30px; }
+.softmax-slide { padding: 54px 84px; }
+.softmax-slide h2 { font-size: var(--font-slide-title); line-height: 1.1; letter-spacing: -.04em; margin: 34px 0 24px; }
+.softmax-slide h2 em { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; color: var(--blue); }
+.softmax-slide figure { margin: 0; }
+.softmax-diagram { display: block; width: 100%; }
+.softmax-diagram text { font-family: Arial, Helvetica, sans-serif; fill: var(--muted); }
+.softmax-operation { font-size: 30px; text-anchor: middle; }
+.softmax-token { font-size: 32px; fill: var(--ink) !important; }
+.softmax-math, .softmax-probability-math { font-size: 34px; text-align: center; }
+.softmax-probability-math { color: var(--blue); }
+.softmax-sum-card { fill: #ffffff03; stroke: #b4b6c455; stroke-width: 1.5; }
+.softmax-sum-label { font-size: 30px; text-anchor: middle; }
+@media print { .softmax-input, .softmax-exponentials, .softmax-normalized { opacity: 1 !important; } }
