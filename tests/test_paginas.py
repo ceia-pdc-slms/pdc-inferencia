@@ -22,6 +22,7 @@ PAGINAS = [
     "laboratorios/docker/docker-por-dentro.html",
     "laboratorios/geracao/geracao-de-texto.html",
     "laboratorios/batching/kv-cache-e-batching.html",
+    "laboratorios/quantizacao/quantizacao-a-fundo.html",
 ]
 
 
@@ -90,7 +91,8 @@ class Paginas(unittest.TestCase):
         """?autoteste faz a página clicar em tudo; precisa terminar sem erro."""
         for pagina in ["laboratorios/compressao/laboratorio-compressao.html?autoteste", "testbench/index.html?autoteste",
                        "laboratorios/geracao/geracao-de-texto.html?autoteste",
-                       "laboratorios/batching/kv-cache-e-batching.html?autoteste"]:
+                       "laboratorios/batching/kv-cache-e-batching.html?autoteste",
+                       "laboratorios/quantizacao/quantizacao-a-fundo.html?autoteste"]:
             with self.subTest(pagina=pagina):
                 raiz = re.search(r"<html[^>]*>", self.dom(pagina, budget=20000)).group(0)
                 self.assertNotIn("data-erro", raiz, raiz)

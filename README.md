@@ -30,7 +30,7 @@ Na geração (decode), o modelo inteiro é lido da memória a cada token. Compri
 | [`apresentacoes/`](apresentacoes/) | O material de cada reunião de sexta: `semana-NN_data/tipo_pessoa_tema/`. Índice por semana e por pessoa no [README de lá](apresentacoes/README.md) |
 | [`maquinas/`](maquinas/) | Um dossiê por máquina física do time: como ligar, acessar, rodar um modelo e medir |
 | [`testbench/`](testbench/) | A bancada de medição (o *harness* do plano): servidor, pipelines e resultados com procedência automática |
-| [`laboratorios/`](laboratorios/) | Páginas interativas para aprender mexendo: Docker por dentro, compressão em 500 MB, geração de texto, KV cache e batching |
+| [`laboratorios/`](laboratorios/) | Páginas interativas para aprender mexendo: Docker por dentro, compressão em 500 MB, geração de texto, KV cache e batching, quantização a fundo |
 | [`docker/`](docker/) | Ambiente da oficina de Docker: o modelo em container (llama.cpp) e o `bench.py` |
 | [`runs/`](runs/) | Medições feitas fora da bancada (Ollama, llama-bench…), um YAML por medição, com procedência completa |
 | [`recipes/`](recipes/) | Receitas de compressão reproduzíveis: quantização, pruning, destilação |
@@ -50,6 +50,7 @@ Tudo abre a partir de [`index.html`](index.html), o hub dos laboratórios e do m
 | [`laboratorios/compressao/laboratorio-compressao.html`](laboratorios/compressao/laboratorio-compressao.html) | Compressão 1/2: as quatro famílias e a receita para caber em 500 MB (semana 5) |
 | [`laboratorios/geracao/geracao-de-texto.html`](laboratorios/geracao/geracao-de-texto.html) | Como um modelo gera texto: prefill, decode, KV cache e sampling (semana 6) |
 | [`laboratorios/batching/kv-cache-e-batching.html`](laboratorios/batching/kv-cache-e-batching.html) | KV cache e batching: PagedAttention, batching contínuo, chunked prefill, prefix caching (semana 7) |
+| [`laboratorios/quantizacao/quantizacao-a-fundo.html`](laboratorios/quantizacao/quantizacao-a-fundo.html) | Quantização a fundo: FP16, FP8, INT4 e FP4, o que quebra e o que acelera (semana 8) |
 | [`testbench/index.html`](testbench/index.html) | Bancada de medição: pipelines, execução com log ao vivo, comparação de resultados |
 
 ### O que precisa estar instalado
@@ -106,7 +107,7 @@ Rodam sem modelo nenhum: um servidor falso, compatível com OpenAI e com tempos 
 
 ```bash
 python -m unittest tests.test_bancada -v   # bancada, bench.py, pipelines e API (~45 s)
-node --test tests/calculo.test.js tests/geracao.test.js tests/batching.test.js   # contas dos laboratórios (<1 s)
+node --test tests/calculo.test.js tests/geracao.test.js tests/batching.test.js tests/quantizacao.test.js   # contas dos laboratórios (<1 s)
 python -m unittest tests.test_paginas -v   # abre cada página no Chrome/Edge sem janela (~8 min)
 ```
 

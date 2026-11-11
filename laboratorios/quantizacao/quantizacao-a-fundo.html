@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quantização a fundo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css">
+<link rel="stylesheet" href="../../assets/tema.css">
+<script src="../../assets/tema.js" defer></script>
+<script src="quantizacao.js" defer></script>
+<style>
+/* cores: bits = c1 (azul), escala = c4 (roxo), o que quebra = c2 (laranja), o que acelera = c3 (verde) */
+:root { --sinal: var(--c2); --exp: var(--c1); --man: var(--c3); --pesos: var(--c1); --resto: var(--c2); }
+.layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 56px; }
+.indice { position: sticky; top: 84px; align-self: start; padding-top: 72px; display: flex; flex-direction: column; gap: 2px; font-size: .86rem; }
+.indice a { text-decoration: none; color: var(--faint); padding: 6px 0 6px 14px; border-left: 2px solid var(--line); transition: color .25s, border-color .25s; display: flex; gap: 10px; }
+.indice a span { font: 500 .72rem var(--font-mono); padding-top: 2px; }
+.indice a:hover { color: var(--fg); }
+.indice a.ativo { color: var(--fg); border-left-color: var(--c, var(--fg)); }
+
+.hero { padding: 72px 0 24px; }
+.pergunta { margin-top: 32px; display: flex; gap: 16px; align-items: flex-start; padding: 18px 20px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); max-width: 760px; }
+.pergunta b { font: 500 .7rem var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); white-space: nowrap; padding-top: 4px; }
+.pergunta p { margin: 0; font-size: 1.08rem; font-weight: 500; }
+.fases-leg { margin-top: 20px; display: flex; gap: 8px; flex-wrap: wrap; }
+.fases-leg span { font: 500 .78rem var(--font-mono); padding: 5px 10px; border-radius: 999px; color: #fff; background: var(--c); }
+
+.cap { padding-top: 96px; scroll-margin-top: 60px; }
+.cap-head { display: flex; gap: 18px; align-items: baseline; margin-bottom: 8px; }
+.cap-num { font: 500 .8rem var(--font-mono); color: var(--c, var(--accent)); padding: 3px 8px; border-radius: 6px; background: color-mix(in srgb, var(--c, var(--accent)) 12%, transparent); flex: none; }
+.cap p.texto { max-width: 70ch; color: var(--muted); font-size: 1.02rem; margin: 14px 0 0; }
+.cap p.texto b { color: var(--fg); font-weight: 600; }
+.palco { margin-top: 32px; display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(280px, .7fr); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; }
+.palco-vis { padding: 28px; border-right: 1px solid var(--line); min-width: 0; display: flex; flex-direction: column; gap: 18px; }
+.palco-txt { padding: 28px; display: flex; flex-direction: column; gap: 14px; background: color-mix(in srgb, var(--sunken) 45%, var(--surface)); }
+.palco-txt h3 { font: 600 1.3rem/1.2 var(--font-display); margin: 0; }
+.palco-txt p { margin: 0; color: var(--muted); }
+.palco-txt p b { color: var(--fg); }
+.ctrl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 20px; }
+.ctrl .largo { grid-column: 1 / -1; }
+.seg { flex-wrap: wrap; }
+.rotulo { font: 500 .72rem var(--font-mono); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.metricas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border-radius: var(--r); overflow: hidden; border: 1px solid var(--line); }
+.metricas div { background: var(--surface); padding: 10px 12px; min-width: 0; }
+.metricas small { display: block; font-size: .72rem; color: var(--muted); }
+.metricas b { font: 500 1.05rem var(--font-mono); font-variant-numeric: tabular-nums; }
+.nota { font-size: .8rem; color: var(--faint); margin: 0; }
+
+/* 01 · bits */
+.bitbox { display: flex; flex-wrap: wrap; gap: 3px; }
+.bitbox span { width: 26px; height: 34px; border-radius: 5px; display: grid; place-items: center; font: 500 .9rem var(--font-mono); color: #fff; }
+.bitbox span.s { background: var(--sinal); } .bitbox span.e { background: var(--exp); } .bitbox span.m { background: var(--man); }
+.bitleg { display: flex; gap: 14px; font-size: .78rem; color: var(--muted); }
+.bitleg i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.reta { position: relative; height: 64px; border-bottom: 2px solid var(--line-strong); margin: 8px 6px 22px; }
+.reta i { position: absolute; bottom: -6px; width: 2px; height: 12px; background: var(--exp); transform: translateX(-1px); }
+.reta i.alvo { background: var(--sinal); height: 34px; width: 3px; }
+.reta small { position: absolute; bottom: -22px; transform: translateX(-50%); font: .68rem var(--font-mono); color: var(--faint); }
+
+/* 02 · escala */
+.barras { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 8px; align-items: end; height: 190px; }
+.barras > div { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; gap: 3px; position: relative; min-width: 0; }
+.barras .par { display: flex; gap: 3px; align-items: flex-end; width: 100%; flex: 1; min-height: 0; }
+.barras .par i { align-self: flex-end; }
+.barras .par i { flex: 1; border-radius: 4px 4px 0 0; transition: height .4s var(--ease); min-height: 1px; }
+.barras small { font: .66rem var(--font-mono); color: var(--muted); }
+.barras b { font: 500 .66rem var(--font-mono); }
+.barras .zero b { color: var(--bad); }
+.grupos { display: grid; gap: 6px; }
+
+/* 03 · tabela com barras */
+.tab { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.tab th { text-align: left; font: 500 .7rem var(--font-mono); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.tab td { padding: 7px 8px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.tab td.n { font-family: var(--font-mono); text-align: right; white-space: nowrap; }
+.tab .bar { position: relative; height: 14px; background: var(--sunken); border-radius: 4px; min-width: 80px; }
+.tab .bar i { position: absolute; inset: 0 auto 0 0; border-radius: 4px; }
+.tab tr.quebra td { color: var(--bad); }
+
+/* 05 · conta */
+.empilha { display: flex; height: 40px; border-radius: 10px; overflow: hidden; background: var(--sunken); }
+.empilha i { display: flex; align-items: center; padding: 0 10px; color: #fff; font: 500 .78rem var(--font-mono); white-space: nowrap; overflow: hidden; transition: width .45s var(--ease); }
+.cascata { display: grid; gap: 8px; }
+.cascata div { display: grid; grid-template-columns: 210px 1fr 62px; gap: 10px; align-items: center; font-size: .86rem; }
+.cascata .pista { height: 20px; background: var(--sunken); border-radius: 6px; overflow: hidden; }
+.cascata .pista i { display: block; height: 100%; border-radius: 6px; transition: width .45s var(--ease); }
+.cascata b { font: 500 .86rem var(--font-mono); text-align: right; }
+
+/* 06 · resposta */
+.ordem { margin-top: 32px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.ordem .card { padding: 22px; display: flex; flex-direction: column; gap: 10px; border-top: 4px solid var(--c); }
+.ordem small { font: 500 .72rem var(--font-mono); color: var(--c); }
+.ordem h3 { margin: 0; font: 600 1.2rem var(--font-display); }
+.ordem p { margin: 0; color: var(--muted); font-size: .93rem; }
+.resposta { margin-top: 20px; padding: 22px 26px; border-radius: var(--r-lg); background: var(--fg); color: var(--bg); font-size: 1.04rem; line-height: 1.6; }
+.resposta b { color: var(--bg); }
+.material { margin-top: 28px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.material a { padding: 18px; display: flex; flex-direction: column; gap: 6px; text-decoration: none; }
+.material small { font: 500 .7rem var(--font-mono); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.material b { font-weight: 600; }
+.material span { color: var(--muted); font-size: .9rem; }
+.rodape { padding: 80px 0 60px; color: var(--faint); font-size: .84rem; }
+
+@media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } .indice { display: none; } }
+@media (max-width: 900px) {
+  .palco { grid-template-columns: 1fr; }
+  .palco-vis { border-right: 0; border-bottom: 1px solid var(--line); }
+  .ordem, .material { grid-template-columns: 1fr; }
+  .metricas { grid-template-columns: 1fr 1fr; }
+  .ctrl { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .palco-vis, .palco-txt { padding: 18px; }
+  .cascata div { grid-template-columns: 1fr 56px; }
+  .cascata div span:first-child { grid-column: 1 / -1; }
+  .bitbox span { width: 18px; height: 28px; font-size: .75rem; }
+  .tab .col-bar { display: none; }
+}
+</style>
+</head>
+<body>
+<header class="appbar"><div class="appbar-in">
+  <a class="marca" href="../../index.html" aria-label="Início">
+    <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" style="fill:var(--accent)"/><g fill="#fff"><rect x="6.5" y="7" width="3.6" height="18" rx="1.3"/><rect x="12" y="10.5" width="3.6" height="14.5" rx="1.3"/><rect x="17.5" y="14" width="3.6" height="11" rx="1.3"/><rect x="23" y="17.5" width="3.6" height="7.5" rx="1.3"/></g></svg>
+    <span><b>Compressão &amp; Testbench</b><small>PDC · SLMs</small></span>
+  </a>
+  <nav class="appnav">
+    <a href="../../index.html" aria-current="page">Laboratórios</a>
+    <a href="../../testbench/index.html">Testbench</a>
+    <button class="tema-btn" data-tema-alternar aria-label="Alternar tema claro/escuro"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg></button>
+  </nav>
+</div></header>
+
+<div class="wrap layout">
+  <nav class="indice" id="indice" aria-label="Partes">
+    <a href="#bits" style="--c:var(--c1)"><span>01</span>Os bits</a>
+    <a href="#escala" style="--c:var(--c4)"><span>02</span>Escala e outliers</a>
+    <a href="#quebra" style="--c:var(--c2)"><span>03</span>O que quebra</a>
+    <a href="#acelera" style="--c:var(--c3)"><span>04</span>O que acelera</a>
+    <a href="#conta" style="--c:var(--c1)"><span>05</span>A conta do tok/s</a>
+    <a href="#resposta"><span>06</span>A resposta</a>
+  </nav>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">Principal · semana 8 · Beatriz</p>
+      <h1 class="display">Quantização a fundo</h1>
+      <p class="lede">FP16, FP8, INT4 e FP4: como cada formato guarda um número, o que se perde quando os bits acabam e por que um arquivo 4× menor quase nunca gera texto 4× mais rápido. Os números de medição desta página são do Qwen2.5-0.5B rodando num notebook só com CPU.</p>
+      <div class="fases-leg"><span style="--c:var(--c1)">bits</span><span style="--c:var(--c4)">escala e outliers</span><span style="--c:var(--c2)">o que quebra</span><span style="--c:var(--c3)">o que acelera</span></div>
+      <div class="pergunta"><b>Pergunta da semana</b><p>O tok/s aumentou na mesma proporção em que os bytes por token caíram? Se não, o que consumiu o ganho?</p></div>
+    </section>
+
+    <!-- ===================== 01 ===================== -->
+    <section class="cap" id="bits" style="--c:var(--c1)" data-revelar>
+      <div class="cap-head"><span class="cap-num">01</span><h2 class="display">Os bits: sinal, expoente e mantissa</h2></div>
+      <p class="texto">Um número em ponto flutuante tem três partes. O <b>expoente</b> diz a ordem de grandeza (a faixa), a <b>mantissa</b> diz os dígitos (a precisão). Com menos bits, um dos dois encolhe. Escolha o formato e digite um número.</p>
+      <div class="palco">
+        <div class="palco-vis">
+          <div class="ctrl">
+            <div class="campo largo"><span>Formato</span><div class="seg" id="fFmt" role="group" aria-label="Formato"></div></div>
+            <label class="campo"><span>Número</span><input id="fX" type="text" inputmode="decimal" value="0,1"></label>
+            <div class="campo"><span>Exemplos</span><div class="seg" id="fEx" role="group" aria-label="Exemplos"></div></div>
+          </div>
+          <div><span class="rotulo">Como fica guardado</span><div class="bitbox" id="fBits" style="margin-top:8px"></div>
+            <div class="bitleg" style="margin-top:8px"><span><i style="background:var(--sinal)"></i>sinal</span><span><i style="background:var(--exp)"></i>expoente</span><span><i style="background:var(--man)"></i>mantissa</span></div></div>
+          <div id="fRetaBox"><span class="rotulo">Todos os valores positivos do formato (escala de raiz quadrada)</span><div class="reta" id="fReta"></div></div>
+          <div class="metricas">
+            <div><small>Guardado como</small><b id="fmV">—</b></div>
+            <div><small>Erro</small><b id="fmE">—</b></div>
+            <div><small>Maior número</small><b id="fmMax">—</b></div>
+            <div><small>Bits</small><b id="fmB">—</b></div>
+          </div>
+        </div>
+        <div class="palco-txt" id="fTxt"></div>
+      </div>
+    </section>
+
+    <!-- ===================== 02 ===================== -->
+    <section class="cap" id="escala" style="--c:var(--c4)" data-revelar>
+      <div class="cap-head"><span class="cap-num">02</span><h2 class="display">Escala: 16 degraus para qualquer peso</h2></div>
+      <p class="texto">INT4 só tem 16 valores: −8 a 7. Para guardar pesos como 0,12 ou −0,31, cada grupo de pesos ganha uma <b>escala</b>: o maior peso do grupo vira 7 e o resto é proporcional. Todo LLM tem alguns <b>outliers</b>, pesos muito maiores que os outros. Aumente o outlier e veja os pesos pequenos sumirem.</p>
+      <div class="palco">
+        <div class="palco-vis">
+          <div class="ctrl">
+            <div class="campo"><span>Formato</span><div class="seg" id="eFmt" role="group" aria-label="Formato"></div></div>
+            <div class="campo"><span>Uma escala para</span><div class="seg" id="eGrp" role="group" aria-label="Grupo"></div></div>
+            <label class="campo largo"><span>Tamanho do outlier (o 8º peso) <output id="eOOut">8,0</output></span><input type="range" id="eO" min="0.3" max="16" step="0.1" value="8"></label>
+          </div>
+          <div><span class="rotulo">Peso original (claro) e depois de ida e volta (escuro), em |valor|</span><div class="barras" id="eBar" style="margin-top:10px"></div></div>
+          <div class="metricas">
+            <div><small>Erro relativo</small><b id="emE">—</b></div>
+            <div><small>Pesos que viraram 0</small><b id="emZ">—</b></div>
+            <div><small>Escalas guardadas</small><b id="emS">—</b></div>
+            <div><small>Bits por peso, com escalas</small><b id="emB">—</b></div>
+          </div>
+        </div>
+        <div class="palco-txt" id="eTxt"></div>
+      </div>
+    </section>
+
+    <!-- ===================== 03 ===================== -->
+    <section class="cap" id="quebra" style="--c:var(--c2)" data-revelar>
+      <div class="cap-head"><span class="cap-num">03</span><h2 class="display">O que quebra: medido nos pesos de um modelo de verdade</h2></div>
+      <p class="texto">Os 358 milhões de pesos das camadas do Qwen2.5-0.5B, arredondados em cada formato. <b>Erro</b> é o quanto os pesos mudaram. <b>Perplexidade</b> é o quanto o modelo ficou em dúvida num texto fixo de português, código e inglês (17,98 no original, menor é melhor).</p>
+      <div class="palco" style="grid-template-columns:1fr">
+        <div class="palco-vis" style="border-right:0">
+          <div class="campo"><span>Mostrar</span><div class="seg" id="qVer" role="group" aria-label="Mostrar"></div></div>
+          <table class="tab" id="qTab"></table>
+          <p class="nota" id="qNota"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== 04 ===================== -->
+    <section class="cap" id="acelera" style="--c:var(--c3)" data-revelar>
+      <div class="cap-head"><span class="cap-num">04</span><h2 class="display">O que acelera: o mesmo INT4, três velocidades</h2></div>
+      <p class="texto">Todas as multiplicações por pesos de um passo do Qwen2.5-0.5B (24 camadas e o lm_head), no ONNX Runtime, com 4 núcleos. Menos bytes só viram velocidade quando o <b>kernel</b>, o código que faz a multiplicação, sabe trabalhar com eles. E só no <b>decode</b>: no prefill, quem limita são as contas.</p>
+      <div class="palco">
+        <div class="palco-vis">
+          <div class="campo"><span>Tokens por passo</span><div class="seg" id="aLote" role="group" aria-label="Lote"></div></div>
+          <table class="tab" id="aTab"></table>
+        </div>
+        <div class="palco-txt" id="aTxt"></div>
+      </div>
+    </section>
+
+    <!-- ===================== 05 ===================== -->
+    <section class="cap" id="conta" style="--c:var(--c1)" data-revelar>
+      <div class="cap-head"><span class="cap-num">05</span><h2 class="display">A conta do tok/s: onde o ganho some</h2></div>
+      <p class="texto">Um token custa duas coisas: <b>trazer os pesos</b> (encolhe com a quantização) e <b>todo o resto</b>: atenção sobre o KV cache, normalizações, escolha do token, o próprio runtime (não encolhe). O ponto de partida é o que medi: 29 ms de resto com prompt curto, mais 25 µs por token de contexto.</p>
+      <div class="palco">
+        <div class="palco-vis">
+          <div class="ctrl">
+            <div class="campo"><span>Camadas</span><div class="seg" id="cCam" role="group" aria-label="Camadas"></div></div>
+            <div class="campo"><span>Matriz de saída (lm_head)</span><div class="seg" id="cSai" role="group" aria-label="Saída"></div></div>
+            <div class="campo largo"><span>Kernel</span><div class="seg" id="cKer" role="group" aria-label="Kernel"></div></div>
+            <label class="campo"><span>Resto fixo por token <output id="cFOut">29 ms</output></span><input type="range" id="cF" min="0" max="60" step="0.5" value="29.2"></label>
+            <label class="campo"><span>Tokens no contexto <output id="cCOut">64</output></span><input type="range" id="cC" min="0" max="8192" step="64" value="64"></label>
+          </div>
+          <div><span class="rotulo">Um token, em ms: pesos (azul) e resto (laranja)</span><div class="empilha" id="cBar" style="margin-top:8px"></div></div>
+          <div><span class="rotulo">Contra FP16 com o mesmo kernel e o mesmo resto</span><div class="cascata" id="cCas" style="margin-top:10px"></div></div>
+          <div class="metricas">
+            <div><small>Bytes de pesos por token</small><b id="cmB">—</b></div>
+            <div><small>Tok/s</small><b id="cmT">—</b></div>
+            <div><small>Resto no token</small><b id="cmR">—</b></div>
+            <div><small>Ganho aproveitado</small><b id="cmA">—</b></div>
+          </div>
+        </div>
+        <div class="palco-txt" id="cTxt"></div>
+      </div>
+    </section>
+
+    <!-- ===================== 06 ===================== -->
+    <section class="cap" id="resposta" data-revelar>
+      <div class="cap-head"><span class="cap-num">06</span><h2 class="display">A resposta</h2></div>
+      <div class="ordem">
+        <div class="card" style="--c:var(--c4)"><small>1 · Os bytes caem menos que o nome</small><h3>4 bits não são 4 bits</h3><p>As escalas somam 0,5 bit por peso, e a matriz de saída fica em 8 bits. Do F16 para o Q4_0, o nome promete 4× e cada token lê só 2,9× menos.</p></div>
+        <div class="card" style="--c:var(--c3)"><small>2 · O kernel decide</small><h3>Menos bytes, mais trabalho</h3><p>Cada peso precisa ser desempacotado. Com conta inteira, o INT4 foi 5,6× mais rápido; desempacotando para FP32, 2,5×; com um kernel sem otimização, 20× mais lento.</p></div>
+        <div class="card" style="--c:var(--c2)"><small>3 · O resto não encolhe</small><h3>29% a 63% do token</h3><p>Atenção, KV cache, normalizações e o runtime não mudam com o formato dos pesos. Quanto maior o contexto, menor o ganho.</p></div>
+      </div>
+      <div class="resposta" id="resp"></div>
+      <div class="material">
+        <a class="card" href="../../apresentacoes/semana-08_2026-11-06/principal_beatriz_quantizacao-a-fundo/quantizacao-a-fundo.pdf"><small>Slides</small><b>Quantização a fundo</b><span>Com roteiro de fala. O último slide é a resposta.</span></a>
+        <a class="card" href="../../apresentacoes/semana-08_2026-11-06/principal_beatriz_quantizacao-a-fundo/quantizacao_a_fundo.py"><small>Código</small><b>quantizacao_a_fundo.py</b><span>Erro e perplexidade por formato, kernels, passo de decode, ponta a ponta e GGUF.</span></a>
+        <a class="card" href="../batching/kv-cache-e-batching.html#lote"><small>Laboratório</small><b>Semana 7: por que o decode lê todos os pesos</b><span>O lote, o KV cache e o roofline.</span></a>
+      </div>
+    </section>
+    <p class="rodape">Medidas no notebook-bia (Intel Core i5-1135G7, 4 núcleos, só CPU, 10/11/2026): PyTorch 2.7.1, transformers 4.49, ONNX Runtime 1.24.1. A parte 05 é uma conta (tempo dos pesos = bytes ÷ banda efetiva do kernel, mais o resto medido), não uma medida nova. As contas estão em <code>laboratorios/quantizacao/quantizacao.js</code>, testadas em <code>tests/quantizacao.test.js</code>.</p>
+  </main>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+const Q = window.Quantizacao, M = Q.MEDIDAS;
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const nf = (v, d = 0) => v.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
+const num = v => !isFinite(v) ? (v > 0 ? "+∞" : "−∞") : v === 0 ? "0" : Math.abs(v) >= 1e6 || Math.abs(v) < 1e-4 ? v.toExponential(3).replace(".", ",") : v.toLocaleString("pt-BR", { maximumSignificantDigits: 7 });
+const mb = b => b >= 1e9 ? nf(b / 1e9, 2) + " GB" : nf(b / 1e6, 0) + " MB";
+const segBotoes = (el, itens, atual, fn) => {
+  el.innerHTML = itens.map(([v, t]) => `<button data-v="${esc(v)}" aria-pressed="${v === atual}">${esc(t)}</button>`).join("");
+  el.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; el.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); fn(b.dataset.v); });
+};
+
+/* ---------- 01 · bits ---------- */
+const F = { fmt: "FP16", x: 0.1 };
+segBotoes($("fFmt"), Q.FLOATS.map(f => [f.id, f.nome]), F.fmt, v => { F.fmt = v; calcBits(); });
+const EXEMPLOS = [["0,1", 0.1], ["1/3", 1 / 3], ["70.000", 70000], ["2,6", 2.6], ["0,0001", 0.0001]];
+segBotoes($("fEx"), EXEMPLOS.map(([t]) => [t, t]), null, v => { const e = EXEMPLOS.find(x => x[0] === v); F.x = e[1]; $("fX").value = v; calcBits(); });
+$("fX").addEventListener("input", e => { const v = parseFloat(e.target.value.replace(/\./g, "").replace(",", ".")); if (isFinite(v)) { F.x = v; calcBits(); } });
+function calcBits() {
+  const f = Q.float(F.fmt), v = Q.arredonda(F.x, f), c = Q.campos(v, f);
+  $("fBits").innerHTML = `<span class="s">${c.sinal}</span>` + [...c.expoente].map(b => `<span class="e">${b}</span>`).join("") + [...c.mantissa].map(b => `<span class="m">${b}</span>`).join("");
+  const err = F.x === 0 ? 0 : Math.abs(v - F.x) / Math.abs(F.x);
+  $("fmV").textContent = num(v); $("fmE").textContent = isFinite(v) ? nf(100 * err, err < 0.001 ? 4 : 2) + "%" : "estourou";
+  $("fmMax").textContent = num(Q.maximo(f)); $("fmB").textContent = Q.bits(f);
+  const pequeno = Q.bits(f) <= 8;
+  $("fRetaBox").hidden = !pequeno;
+  if (pequeno) {
+    const g = Q.grade(f), mx = Q.maximo(f), pos = x => 100 * Math.sqrt(Math.min(Math.abs(x), mx) / mx);
+    const marcas = g.length <= 16 ? g : [0, Q.menorNormal(f), 1, mx / 16, mx / 4, mx];
+    $("fReta").innerHTML = g.map(x => `<i style="left:${pos(x)}%"></i>`).join("") + `<i class="alvo" style="left:${pos(v)}%"></i>` +
+      marcas.map(x => `<small style="left:${pos(x)}%">${num(x)}</small>`).join("");
+  }
+  const passo1 = Math.pow(2, -f.m);
+  $("fTxt").innerHTML = `<span class="rotulo" style="color:var(--exp)">${esc(f.nome)} · ${f.e} bits de expoente, ${f.m} de mantissa</span>
+    <h3>${num(F.x)} vira ${num(v)}</h3>
+    <p>${!isFinite(v) ? `<b>Estourou.</b> O maior ${esc(f.nome)} é ${num(Q.maximo(f))}. É por isso que ativações grandes quebram em FP16 e não em BF16, que tem a mesma faixa do FP32.` :
+      Math.abs(F.x) > Q.maximo(f) ? `<b>Saturou no máximo</b> (${num(Q.maximo(f))}): este formato não tem infinito. Para caber, o tensor precisa de uma escala.` :
+      `Perto de 1, os vizinhos estão a ${num(passo1)} de distância: cerca de ${nf(Math.log10(Math.pow(2, f.m + 1)), 1)} dígitos certos.`}</p>
+    <p><b>Uso típico:</b> ${esc(f.uso)}.</p>
+    ${pequeno ? `<p>Com ${Q.bits(f)} bits, o formato tem só <b>${Q.grade(f).length - 1} valores positivos</b>. Os degraus são finos perto do zero e largos perto do topo.</p>` : ""}`;
+}
+
+/* ---------- 02 · escala ---------- */
+const E = { fmt: "int4", grupo: 0, outlier: 8 };
+const BASE = [0.12, -0.31, 0.05, 0.27, -0.08, 0.19, -0.22];
+segBotoes($("eFmt"), [["int4", "INT4"], ["fp4", "FP4"], ["int8", "INT8"]], E.fmt, v => { E.fmt = v; calcEsc(); });
+segBotoes($("eGrp"), [["0", "o tensor todo"], ["4", "cada 4 pesos"], ["2", "cada 2 pesos"]], "0", v => { E.grupo = +v; calcEsc(); });
+$("eO").addEventListener("input", e => { E.outlier = +e.target.value; calcEsc(); });
+function calcEsc() {
+  const v = [...BASE, E.outlier];
+  const op = E.fmt === "fp4" ? { tipo: "fp4", grupo: E.grupo } : { tipo: "int", bits: E.fmt === "int8" ? 8 : 4, grupo: E.grupo };
+  const r = Q.quantiza(v, op);
+  $("eOOut").textContent = nf(E.outlier, 1);
+  const pequenoMax = 0.35, h = x => Math.min(100, 100 * Math.abs(x) / pequenoMax);
+  $("eBar").innerHTML = v.map((x, i) => `<div class="${r.volta[i] === 0 ? "zero" : ""}"><b>${nf(r.volta[i], 2)}</b><div class="par"><i style="height:${h(x)}%;background:color-mix(in srgb,var(--c4) 30%,var(--surface))"></i><i style="height:${h(r.volta[i])}%;background:var(--c4)"></i></div><small>${nf(x, 2)}${i === 7 ? " ↑" : ""}</small></div>`).join("");
+  $("emE").textContent = nf(100 * r.erroRel, 1) + "%"; $("emZ").textContent = r.zerados + " de 7";
+  $("emS").textContent = r.escalas.length; $("emB").textContent = nf(r.bitsPorPeso, 2);
+  const nomeF = { int4: "INT4", fp4: "FP4", int8: "INT8" }[E.fmt];
+  $("eTxt").innerHTML = `<span class="rotulo" style="color:var(--c4)">${nomeF} · ${E.grupo ? `grupos de ${E.grupo}` : "uma escala só"}</span>
+    <h3>${r.zerados ? `${r.zerados} pesos viraram zero` : "nenhum peso sumiu"}</h3>
+    <p>Escala${r.escalas.length > 1 ? "s" : ""}: ${r.escalas.map(s => nf(s, 3)).join(" · ")}. Cada peso vira o inteiro mais perto de peso ÷ escala; na volta, inteiro × escala.</p>
+    <p>${E.grupo === 0 && E.outlier > 2 ? `O outlier de ${nf(E.outlier, 1)} define a escala do tensor todo. Os pesos pequenos ficam abaixo de meio degrau e <b>arredondam para zero</b>.` :
+      E.grupo ? `Com uma escala por grupo, o outlier só estraga o próprio grupo. É o que o Q4_0 do llama.cpp, o MXFP4 e o NVFP4 fazem, com grupos de 32 ou 16. O preço: ${nf(16 / E.grupo, 1)} bit a mais por peso para guardar as escalas (com grupos de 32, só 0,5).` :
+      "Sem outlier, uma escala só já serve."}</p>
+    <p>O maior peso de cada grupo sempre volta exato: é ele que define a escala.</p>`;
+}
+
+/* ---------- 03 · o que quebra ---------- */
+let qVer = "ppl";
+segBotoes($("qVer"), [["ppl", "Perplexidade do modelo"], ["erro", "Erro nos pesos"]], qVer, v => { qVer = v; calcQuebra(); });
+function calcQuebra() {
+  const linhas = M.formatos, mx = qVer === "ppl" ? 30 : 80;
+  $("qTab").innerHTML = `<tr><th>Formato</th><th class="n">Bits por peso</th><th class="n">${qVer === "ppl" ? "Perplexidade" : "Erro relativo"}</th><th class="col-bar" style="width:40%"></th></tr>` +
+    linhas.map(r => {
+      const v = qVer === "ppl" ? r.ppl : r.erro, quebra = r.ppl > 100;
+      const txt = qVer === "ppl" ? (quebra ? `${num(r.ppl)} · quebrou` : `${nf(r.ppl, 2)} (${r.ppl >= M.pplOriginal ? "+" : ""}${nf(100 * (r.ppl / M.pplOriginal - 1), 1)}%)`) : nf(r.erro, 2) + "%";
+      const cor = quebra ? "var(--bad)" : r.ppl / M.pplOriginal > 1.2 ? "var(--c2)" : "var(--c3)";
+      return `<tr class="${quebra ? "quebra" : ""}"><td>${esc(r.nome)}</td><td class="n">${nf(r.bits, 2)}</td><td class="n">${txt}</td><td class="col-bar"><div class="bar"><i style="width:${Math.min(100, 100 * v / mx)}%;background:${cor}"></i></div></td></tr>`;
+    }).join("");
+  $("qNota").textContent = qVer === "ppl" ? "Barra cortada em 30. As duas linhas vermelhas, com uma escala por tensor, respondem lixo: a perplexidade passa de 700 mil." : "Barra cortada em 80%. Uma escala por tensor perde mais da metade do sinal; com grupos, o INT4 e o FP4 ficam perto de 10%.";
+}
+
+/* ---------- 04 · o que acelera ---------- */
+let aLote = "1";
+segBotoes($("aLote"), [["1", "1 token (decode)"], ["64", "64 tokens (prefill)"]], aLote, v => { aLote = v; calcAcel(); });
+function calcAcel() {
+  const d = M.decode, k = aLote === "1" ? "ms1" : "ms64", n = +aLote, base = d[0];
+  const tps = r => 1000 * n / r[k], mx = Math.max(...d.map(tps));
+  $("aTab").innerHTML = `<tr><th>Configuração</th><th class="n">MB por passo</th><th class="n">Bytes caíram</th><th class="n">Tok/s</th><th class="n">Tok/s subiu</th><th class="col-bar" style="width:24%"></th></tr>` +
+    d.map(r => `<tr><td>${esc(r.config)}</td><td class="n">${nf(r.mb)}</td><td class="n">${nf(base.mb / r.mb, 2)}×</td><td class="n">${nf(tps(r), 1)}</td><td class="n">${nf(base[k] / r[k], 2)}×</td><td class="col-bar"><div class="bar"><i style="width:${100 * tps(r) / mx}%;background:${r.config.includes("sem conta") ? "var(--c2)" : "var(--c3)"}"></i></div></td></tr>`).join("");
+  const i4 = d.find(r => r.config === "INT4 tudo"), si = d.find(r => r.config === "INT4 tudo, sem conta int"), f16 = d.find(r => r.config === "FP16");
+  $("aTxt").innerHTML = aLote === "1"
+    ? `<span class="rotulo" style="color:var(--c3)">decode: limitado pela memória</span><h3>Mesmos bytes, ${nf(si.ms1 / i4.ms1, 1)}× de diferença</h3>
+       <p>Os dois INT4 leem os mesmos ${nf(i4.mb)} MB. Um converte a ativação para INT8 e multiplica em inteiro: <b>${nf(base.ms1 / i4.ms1, 1)}× mais rápido</b> que FP32. O outro desempacota cada peso para FP32 antes de multiplicar: <b>${nf(base.ms1 / si.ms1, 1)}×</b>.</p>
+       <p><b>FP16 não acelerou nada</b> (${nf(base.ms1 / f16.ms1, 2)}×): esta CPU não faz contas em FP16 e converte tudo para FP32. FP8 e FP4 nem têm kernel aqui: precisam de GPU com tensor cores próprios (H100 para FP8, Blackwell para FP4).</p>
+       <p>Com um kernel INT4 sem otimização (o do PyTorch 2.7 para CPU), o mesmo passo foi <b>20× mais lento</b> que FP32.</p>`
+    : `<span class="rotulo" style="color:var(--c2)">prefill: limitado pelas contas</span><h3>Nenhum formato ganhou</h3>
+       <p>Com 64 tokens no passo, cada peso trazido da memória é usado 64 vezes. O gargalo passa a ser multiplicar, e os pesos menores não diminuem as contas. Pelo contrário: desempacotar é trabalho a mais.</p>
+       <p>Para acelerar o prefill, é preciso <b>calcular</b> em menos bits, não só guardar: FP8 e FP4 nos tensor cores das GPUs novas fazem 2× e 4× mais contas por segundo que FP16.</p>`;
+}
+
+/* ---------- 05 · a conta ---------- */
+const C = { camadas: "Q4_0", saida: "Q8_0", kernel: "bom", fixoMs: M.restoFixoMs, ctx: 64 };
+const ARM = ["FP16", "FP8", "Q8_0", "Q4_0", "NVFP4", "INT4"];
+segBotoes($("cCam"), ARM.map(id => [id, Q.armaz(id).nome.replace(" (só teoria)", "")]), C.camadas, v => { C.camadas = v; calcConta(); });
+segBotoes($("cSai"), ["FP16", "Q8_0", "Q4_0"].map(id => [id, Q.armaz(id).nome]), C.saida, v => { C.saida = v; calcConta(); });
+segBotoes($("cKer"), M.kernels.map(k => [k.id, k.nome]), C.kernel, v => { C.kernel = v; calcConta(); });
+$("cF").addEventListener("input", e => { C.fixoMs = +e.target.value; calcConta(); });
+$("cC").addEventListener("input", e => { C.ctx = +e.target.value; calcConta(); });
+function calcConta() {
+  const gbs = M.kernels.find(k => k.id === C.kernel).gbs;
+  const comum = { gbs: 25, fixoMs: C.fixoMs, ctx: C.ctx, ctxUs: M.restoCtxUs };
+  const base = Q.token({ ...comum, camadas: "FP16", saida: "FP16" });
+  const t = Q.token({ ...comum, gbs, camadas: C.camadas, saida: C.saida });
+  const c = Q.compara(base, t);
+  const bitsNome = Math.floor(Q.armaz(C.camadas).bits), nomeBits = 16 / bitsNome;  // "Q4_0" se chama 4 bits, mesmo com 4,5
+  const semResto = Q.token({ ...comum, gbs, fixoMs: 0, ctx: 0, camadas: C.camadas, saida: C.saida }), baseSem = Q.token({ ...comum, fixoMs: 0, ctx: 0, camadas: "FP16", saida: "FP16" });
+  $("cFOut").textContent = nf(C.fixoMs, 1) + " ms"; $("cCOut").textContent = nf(C.ctx);
+  const w = x => (100 * x / t.ms).toFixed(2) + "%";
+  $("cBar").innerHTML = `<i style="width:${w(t.msPesos)};background:var(--pesos)">pesos ${nf(t.msPesos, 1)} ms</i><i style="width:${w(t.msResto)};background:var(--resto)">resto ${nf(t.msResto, 1)} ms</i>`;
+  const etapas = [
+    ["O nome promete (16 → " + bitsNome + " bits)", nomeBits],
+    ["Bytes lidos por token", c.queda],
+    ["Só as multiplicações (sem o resto)", semResto.tokS / baseSem.tokS],
+    ["Tok/s de verdade", c.subida],
+  ];
+  const mx = Math.max(...etapas.map(e => e[1]), 1);
+  $("cCas").innerHTML = etapas.map(([n, v], i) => `<div><span>${esc(n)}</span><div class="pista"><i style="width:${100 * v / mx}%;background:${i === 3 ? "var(--c2)" : "var(--c1)"}"></i></div><b>${nf(v, 2)}×</b></div>`).join("");
+  $("cmB").textContent = mb(t.bytesPesos); $("cmT").textContent = nf(t.tokS, 1);
+  $("cmR").textContent = nf(100 * t.fracResto) + "%";
+  $("cmA").textContent = isFinite(c.aproveitado) ? nf(100 * c.aproveitado) + "%" : "—";
+  $("cTxt").innerHTML = `<span class="rotulo" style="color:var(--c1)">${esc(Q.armaz(C.camadas).nome)} · saída ${esc(Q.armaz(C.saida).nome)}</span>
+    <h3>Bytes ${nf(c.queda, 1)}× menores, tok/s ${nf(c.subida, 1)}× maior</h3>
+    <p>Cada token lê ${mb(t.bytesCamadas)} das camadas e <b>${mb(t.bytesSaida)} da matriz de saída</b> (${nf(100 * t.bytesSaida / t.bytesPesos)}% dos bytes). ${C.saida !== C.camadas ? "Os runtimes costumam deixar a saída em mais bits, porque ela erra mais quando encolhe." : ""}</p>
+    <p>O resto (${nf(t.msResto, 1)} ms) é <b>${nf(100 * t.fracResto)}% do token</b> e não muda com o formato. ${C.ctx > 2000 ? "Com contexto longo, a atenção sobre o KV cache cresce e engole ainda mais do ganho." : "Aumente o contexto e veja o ganho cair."}</p>
+    <p>${C.kernel !== "bom" ? `<b>Kernel ruim:</b> a ${nf(gbs, gbs < 1 ? 2 : 1)} GB/s efetivos, ler menos bytes não adianta, porque o processador gasta o tempo desempacotando.` : "Ponha o resto em 0 para ver o caso ideal: aí, sim, o tok/s sobe junto com os bytes."}</p>`;
+  renderResposta();
+}
+
+/* ---------- 06 · resposta ---------- */
+function renderResposta() {
+  const comum = { gbs: 25, fixoMs: M.restoFixoMs, ctx: 64, ctxUs: M.restoCtxUs };
+  const c = Q.compara(Q.token({ ...comum, camadas: "FP16", saida: "FP16" }), Q.token({ ...comum, camadas: "Q4_0", saida: "Q8_0" }));
+  const g = M.gguf, f16 = g[0].camadas + g[0].saida, q40 = g[3].camadas + g[3].saida;
+  $("resp").innerHTML = `<b>Não.</b> Do F16 para o Q4_0, o nome promete 4×, mas cada token lê ${nf(f16 / q40, 1)}× menos (${nf(f16)} MB → ${nf(q40)} MB). Com um bom kernel, as multiplicações acompanham os bytes. O token inteiro, não: com o resto medido no notebook, a conta dá <b>${nf(c.subida, 1)}× mais tok/s para ${nf(c.queda, 1)}× menos bytes</b>, ${nf(100 * c.aproveitado)}% do ganho prometido. O que consome o resto: as escalas e a saída em 8 bits, o trabalho de desempacotar e tudo que não é peso (atenção, KV cache, normalizações, runtime). E no prefill, quantizar os pesos não acelera nada.`;
+}
+
+calcBits(); calcEsc(); calcQuebra(); calcAcel(); calcConta();
+
+/* ---------- índice lateral ---------- */
+(function () {
+  const links = [...document.querySelectorAll("#indice a")];
+  const caps = links.map(a => document.querySelector(a.getAttribute("href")));
+  if (!("IntersectionObserver" in window)) return;
+  const io = new IntersectionObserver(ents => {
+    ents.forEach(en => { if (en.isIntersecting) links.forEach((a, i) => a.classList.toggle("ativo", caps[i] === en.target)); });
+  }, { rootMargin: "-45% 0px -50% 0px" });
+  caps.forEach(c => c && io.observe(c));
+})();
+
+document.documentElement.dataset.pronto = "1";
+
+/* ?autoteste: clica em tudo, como uma pessoa faria (usado por tests/test_paginas.py) */
+if (/[?&]autoteste/.test(location.search)) (async () => {
+  const espera = ms => new Promise(r => setTimeout(r, ms));
+  const muda = (id, v) => { $(id).value = v; $(id).dispatchEvent(new Event("input")); };
+  for (const b of $("fFmt").querySelectorAll("button")) {
+    b.click();
+    for (const ex of $("fEx").querySelectorAll("button")) ex.click();
+    muda("fX", "-123,5"); muda("fX", "0"); muda("fX", "1e9");
+  }
+  for (const f of $("eFmt").querySelectorAll("button")) for (const g of $("eGrp").querySelectorAll("button")) { f.click(); g.click(); muda("eO", 0.3); muda("eO", 16); }
+  for (const b of $("qVer").querySelectorAll("button")) b.click();
+  for (const b of $("aLote").querySelectorAll("button")) b.click();
+  for (const a of $("cCam").querySelectorAll("button")) for (const s of $("cSai").querySelectorAll("button")) for (const k of $("cKer").querySelectorAll("button")) { a.click(); s.click(); k.click(); }
+  muda("cF", 0); muda("cF", 60); muda("cC", 8192); muda("cC", 0);
+  if ($("eBar").children.length !== 8) throw new Error("parte 02 deveria ter 8 barras");
+  await espera(20);
+  document.documentElement.dataset.autoteste = "ok";
+})().catch(e => { document.documentElement.dataset.erro = "autoteste: " + e.message; });
+});
+</script>
+</body>
+</html>

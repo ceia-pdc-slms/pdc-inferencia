@@ -119,6 +119,9 @@ const LABS = [
   { id: "batching", tipo: "keyword", titulo: "KV cache e batching", semana: 7, quem: "Beatriz", status: "ok",
     desc: "Por que servir 20 pedidos juntos custa muito menos que 20× um. Lote, memória do KV cache, PagedAttention, batching contínuo, chunked prefill e prefix caching.",
     href: "laboratorios/batching/kv-cache-e-batching.html" },
+  { id: "quantizacao", tipo: "oficina", titulo: "Quantização a fundo", semana: 8, quem: "Beatriz", status: "ok",
+    desc: "FP16, FP8, INT4 e FP4 bit a bit, o que um outlier faz com a escala, o que quebra no modelo e por que 4× menos bytes não dão 4× mais tok/s.",
+    href: "laboratorios/quantizacao/quantizacao-a-fundo.html" },
   { id: "transformer", tipo: "oficina", titulo: "Transformer por dentro", semana: 5, quem: "João", status: "breve",
     desc: "Atenção, pesos e funções de ativação. Onde estão os parâmetros de um modelo de 1B, camada por camada.", href: null },
   { id: "testbench", tipo: "ferramenta", titulo: "Testbench", semana: null, quem: "time", status: "proto",
@@ -129,6 +132,8 @@ const TIPOS = { todos: "Todos", oficina: "Oficinas", keyword: "Keywords", ferram
 const STATUS = { ok: ["Disponível", "ok"], proto: ["Protótipo", "acc"], breve: ["Em breve", ""] };
 
 const MATERIAIS = [
+  ["Quantização a fundo", "Principal · semana 8 · Beatriz", "apresentacoes/semana-08_2026-11-06/principal_beatriz_quantizacao-a-fundo/quantizacao-a-fundo.pdf"],
+  ["quantizacao_a_fundo.py: bytes × tok/s", "Principal · semana 8 · Beatriz", "apresentacoes/semana-08_2026-11-06/principal_beatriz_quantizacao-a-fundo/quantizacao_a_fundo.py"],
   ["KV cache e batching", "Keyword · semana 7 · Beatriz", "apresentacoes/semana-07_2026-10-30/keyword_beatriz_infraestrutura-de-inferencia-2-kv-cache-e-batching/kv-cache-e-batching.pdf"],
   ["batching.py: 20 pedidos × 20 vezes um", "Keyword · semana 7 · Beatriz", "apresentacoes/semana-07_2026-10-30/keyword_beatriz_infraestrutura-de-inferencia-2-kv-cache-e-batching/batching.py"],
   ["Como um modelo gera texto", "Principal · semana 6 · Beatriz", "apresentacoes/semana-06_2026-10-23/principal_beatriz_como-um-modelo-gera-texto/como-um-modelo-gera-texto.pdf"],
