@@ -21,6 +21,7 @@ PAGINAS = [
     "testbench/index.html#resultados",
     "laboratorios/docker/docker-por-dentro.html",
     "laboratorios/geracao/geracao-de-texto.html",
+    "laboratorios/batching/kv-cache-e-batching.html",
 ]
 
 
@@ -88,7 +89,8 @@ class Paginas(unittest.TestCase):
     def test_interacoes_completas(self):
         """?autoteste faz a página clicar em tudo; precisa terminar sem erro."""
         for pagina in ["laboratorios/compressao/laboratorio-compressao.html?autoteste", "testbench/index.html?autoteste",
-                       "laboratorios/geracao/geracao-de-texto.html?autoteste"]:
+                       "laboratorios/geracao/geracao-de-texto.html?autoteste",
+                       "laboratorios/batching/kv-cache-e-batching.html?autoteste"]:
             with self.subTest(pagina=pagina):
                 raiz = re.search(r"<html[^>]*>", self.dom(pagina, budget=20000)).group(0)
                 self.assertNotIn("data-erro", raiz, raiz)

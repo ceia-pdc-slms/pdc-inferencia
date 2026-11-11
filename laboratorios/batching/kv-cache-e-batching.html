@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KV cache e batching</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="../../assets/tokens.css">
+<link rel="stylesheet" href="../../assets/tema.css">
+<script src="../../assets/tema.js" defer></script>
+<script src="../geracao/geracao.js" defer></script>
+<script src="batching.js" defer></script>
+<style>
+/* cores: lote = c1 (azul), KV cache = c4 (roxo), batching contínuo = c2 (laranja), prefix caching = c3 (verde) */
+:root { --lote: var(--c1); --kv: var(--c4); --cont: var(--c2); --pref: var(--c3); --chunk: var(--warn); }
+.layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 56px; }
+.indice { position: sticky; top: 84px; align-self: start; padding-top: 72px; display: flex; flex-direction: column; gap: 2px; font-size: .86rem; }
+.indice a { text-decoration: none; color: var(--faint); padding: 6px 0 6px 14px; border-left: 2px solid var(--line); transition: color .25s, border-color .25s; display: flex; gap: 10px; }
+.indice a span { font: 500 .72rem var(--font-mono); padding-top: 2px; }
+.indice a:hover { color: var(--fg); }
+.indice a.ativo { color: var(--fg); border-left-color: var(--c, var(--fg)); }
+
+.hero { padding: 72px 0 24px; }
+.pergunta { margin-top: 32px; display: flex; gap: 16px; align-items: flex-start; padding: 18px 20px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); max-width: 760px; }
+.pergunta b { font: 500 .7rem var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); white-space: nowrap; padding-top: 4px; }
+.pergunta p { margin: 0; font-size: 1.08rem; font-weight: 500; }
+.fases-leg { margin-top: 20px; display: flex; gap: 8px; flex-wrap: wrap; }
+.fases-leg span { font: 500 .78rem var(--font-mono); padding: 5px 10px; border-radius: 999px; color: #fff; background: var(--c); }
+
+.cap { padding-top: 96px; scroll-margin-top: 60px; }
+.cap-head { display: flex; gap: 18px; align-items: baseline; margin-bottom: 8px; }
+.cap-num { font: 500 .8rem var(--font-mono); color: var(--c, var(--accent)); padding: 3px 8px; border-radius: 6px; background: color-mix(in srgb, var(--c, var(--accent)) 12%, transparent); flex: none; }
+.cap p.texto { max-width: 70ch; color: var(--muted); font-size: 1.02rem; margin: 14px 0 0; }
+.cap p.texto b { color: var(--fg); font-weight: 600; }
+.palco { margin-top: 32px; display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(280px, .7fr); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; }
+.palco-vis { padding: 28px; border-right: 1px solid var(--line); min-width: 0; display: flex; flex-direction: column; gap: 18px; }
+.palco-txt { padding: 28px; display: flex; flex-direction: column; gap: 14px; background: color-mix(in srgb, var(--sunken) 45%, var(--surface)); }
+.palco-txt h3 { font: 600 1.3rem/1.2 var(--font-display); margin: 0; }
+.palco-txt p { margin: 0; color: var(--muted); }
+.palco-txt p b { color: var(--fg); }
+.ctrl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 20px; }
+.ctrl .largo { grid-column: 1 / -1; }
+.seg { flex-wrap: wrap; }
+.rotulo { font: 500 .72rem var(--font-mono); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.botoes { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.metricas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border-radius: var(--r); overflow: hidden; border: 1px solid var(--line); }
+.metricas div { background: var(--surface); padding: 10px 12px; min-width: 0; }
+.metricas small { display: block; font-size: .72rem; color: var(--muted); }
+.metricas b { font: 500 1.05rem var(--font-mono); font-variant-numeric: tabular-nums; }
+.nota { font-size: .8rem; color: var(--faint); margin: 0; }
+@keyframes entra { from { opacity: 0; transform: translateY(6px); } }
+
+/* 01 · lote */
+.colunas { display: flex; align-items: flex-end; gap: 8px; height: 180px; padding-top: 18px; }
+.colunas div { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; min-width: 0; }
+.colunas i { display: block; width: 100%; border-radius: 5px 5px 0 0; background: color-mix(in srgb, var(--lote) 35%, var(--surface)); transition: height .45s var(--ease); }
+.colunas div.atual i { background: var(--lote); }
+.colunas small { font: .7rem var(--font-mono); color: var(--faint); }
+.colunas b { font: 500 .68rem var(--font-mono); color: var(--muted); white-space: nowrap; }
+.raia { display: grid; grid-template-columns: 150px 1fr; gap: 12px; align-items: center; }
+.raia > div:first-child small { display: block; color: var(--muted); font-size: .76rem; }
+.pista { position: relative; height: 32px; background: var(--sunken); border-radius: 8px; overflow: hidden; }
+.pista i { position: absolute; inset: 0 auto 0 0; border-radius: 8px; transition: width .6s var(--ease); }
+.pista span { position: absolute; right: 10px; top: 6px; font: 500 .8rem var(--font-mono); }
+
+/* 02 · memória */
+.membar { display: flex; height: 46px; border-radius: 10px; overflow: hidden; background: var(--sunken); }
+.membar i { display: flex; align-items: center; padding: 0 10px; color: #fff; font: 500 .78rem var(--font-mono); white-space: nowrap; overflow: hidden; transition: width .5s var(--ease); }
+.pedidos { display: flex; flex-wrap: wrap; gap: 4px; min-height: 30px; }
+.pedidos span { width: 14px; height: 14px; border-radius: 3px; background: var(--kv); animation: entra .3s var(--ease); }
+.pedidos em { font: .78rem var(--font-mono); color: var(--muted); font-style: normal; align-self: center; margin-left: 6px; }
+
+/* 03 · PagedAttention */
+.fisico { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
+.fisico div { aspect-ratio: 1.6; border-radius: 6px; display: grid; place-items: center; font: 500 .72rem var(--font-mono); background: var(--sunken); color: var(--faint); border: 1px dashed var(--line); transition: background .3s; position: relative; overflow: hidden; }
+.fisico div.ocup { color: #fff; border: 0; }
+.fisico div.ocup i { position: absolute; left: 0; bottom: 0; height: 4px; background: rgba(255,255,255,.75); }
+.tabelas { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.tabelas div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 8px 10px; font: .76rem var(--font-mono); }
+.tabelas b { display: block; margin-bottom: 4px; }
+
+/* 04 · agenda */
+.agenda { display: grid; gap: 4px; overflow-x: auto; padding-bottom: 4px; }
+.agenda .lin { display: flex; gap: 3px; align-items: center; }
+.agenda .lin small { width: 54px; flex: none; font: .7rem var(--font-mono); color: var(--faint); }
+.agenda .c { width: 26px; height: 26px; border-radius: 5px; flex: none; display: grid; place-items: center; font: 600 .7rem var(--font-mono); color: #fff; }
+.agenda .c.vazio { background: var(--sunken); }
+.agenda .c.ocioso { background: transparent; box-shadow: inset 0 0 0 1.5px var(--bad); }
+.fila { display: flex; flex-wrap: wrap; gap: 6px; }
+.fila span { font: 500 .76rem var(--font-mono); padding: 3px 8px; border-radius: 5px; color: #fff; }
+
+/* 05 · chunked */
+.passos { display: flex; height: 40px; gap: 2px; background: var(--sunken); border-radius: 8px; overflow: hidden; padding: 4px; }
+.passos i { display: block; height: 100%; border-radius: 4px; background: color-mix(in srgb, var(--muted) 45%, var(--surface)); flex: none; }
+.passos i.pref { background: var(--chunk); }
+
+/* 06 · prefixo */
+.req { display: flex; gap: 4px; align-items: center; margin-bottom: 6px; }
+.req small { width: 70px; font: .74rem var(--font-mono); color: var(--muted); flex: none; }
+.req i { height: 22px; border-radius: 5px; display: block; }
+.req i.comp { background: var(--pref); }
+.req i.prop { background: var(--c1); }
+.req i.rep { background: color-mix(in srgb, var(--pref) 25%, var(--surface)); box-shadow: inset 0 0 0 1.5px var(--pref); }
+
+/* 07 · resposta */
+.ordem { margin-top: 32px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.ordem .card { padding: 22px; display: flex; flex-direction: column; gap: 10px; border-top: 4px solid var(--c); }
+.ordem small { font: 500 .72rem var(--font-mono); color: var(--c); }
+.ordem h3 { margin: 0; font: 600 1.2rem var(--font-display); }
+.ordem p { margin: 0; color: var(--muted); font-size: .93rem; }
+.resposta { margin-top: 20px; padding: 22px 26px; border-radius: var(--r-lg); background: var(--fg); color: var(--bg); font-size: 1.04rem; line-height: 1.6; }
+.resposta b { color: var(--bg); }
+.material { margin-top: 28px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.material a { padding: 18px; display: flex; flex-direction: column; gap: 6px; text-decoration: none; }
+.material small { font: 500 .7rem var(--font-mono); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.material b { font-weight: 600; }
+.material span { color: var(--muted); font-size: .9rem; }
+.rodape { padding: 80px 0 60px; color: var(--faint); font-size: .84rem; }
+
+@media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } .indice { display: none; } }
+@media (max-width: 900px) {
+  .palco { grid-template-columns: 1fr; }
+  .palco-vis { border-right: 0; border-bottom: 1px solid var(--line); }
+  .ordem, .material { grid-template-columns: 1fr; }
+  .metricas { grid-template-columns: 1fr 1fr; }
+  .ctrl { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .palco-vis, .palco-txt { padding: 18px; }
+  .raia { grid-template-columns: 1fr; gap: 4px; }
+  .fisico { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+</style>
+</head>
+<body>
+<header class="appbar"><div class="appbar-in">
+  <a class="marca" href="../../index.html" aria-label="Início">
+    <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" style="fill:var(--accent)"/><g fill="#fff"><rect x="6.5" y="7" width="3.6" height="18" rx="1.3"/><rect x="12" y="10.5" width="3.6" height="14.5" rx="1.3"/><rect x="17.5" y="14" width="3.6" height="11" rx="1.3"/><rect x="23" y="17.5" width="3.6" height="7.5" rx="1.3"/></g></svg>
+    <span><b>Compressão &amp; Testbench</b><small>PDC · SLMs</small></span>
+  </a>
+  <nav class="appnav">
+    <a href="../../index.html" aria-current="page">Laboratórios</a>
+    <a href="../../testbench/index.html">Testbench</a>
+    <button class="tema-btn" data-tema-alternar aria-label="Alternar tema claro/escuro"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg></button>
+  </nav>
+</div></header>
+
+<div class="wrap layout">
+  <nav class="indice" id="indice" aria-label="Partes">
+    <a href="#lote" style="--c:var(--c1)"><span>01</span>O lote</a>
+    <a href="#memoria" style="--c:var(--c4)"><span>02</span>KV cache</a>
+    <a href="#paged" style="--c:var(--c4)"><span>03</span>PagedAttention</a>
+    <a href="#agenda" style="--c:var(--c2)"><span>04</span>Batching contínuo</a>
+    <a href="#chunked" style="--c:var(--warn)"><span>05</span>Chunked prefill</a>
+    <a href="#prefixo" style="--c:var(--c3)"><span>06</span>Prefix caching</a>
+    <a href="#resposta"><span>07</span>A resposta</a>
+  </nav>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">Keyword · semana 7 · Beatriz</p>
+      <h1 class="display">KV cache e batching</h1>
+      <p class="lede">Na semana 6, um pedido sozinho. Aqui, o servidor: muita gente ao mesmo tempo, uma GPU só. Esta página mostra por que o lote sai barato, o que limita o tamanho dele (a memória do KV cache) e as quatro técnicas que todo runtime moderno usa para encher o lote sem travar ninguém.</p>
+      <div class="fases-leg"><span style="--c:var(--c1)">lote</span><span style="--c:var(--c4)">KV cache · PagedAttention</span><span style="--c:var(--c2)">batching contínuo</span><span style="--c:var(--warn)">chunked prefill</span><span style="--c:var(--c3)">prefix caching</span></div>
+      <div class="pergunta"><b>Pergunta da semana</b><p>Por que servir 20 pedidos ao mesmo tempo custa muito menos que 20× servir um?</p></div>
+    </section>
+
+    <!-- ===================== 01 ===================== -->
+    <section class="cap" id="lote" style="--c:var(--c1)" data-revelar>
+      <div class="cap-head"><span class="cap-num">01</span><h2 class="display">O lote: ler os pesos uma vez, servir a todos</h2></div>
+      <p class="texto">No decode, cada passo traz <b>todos os pesos</b> da memória para gerar um token. Com vários pedidos no mesmo passo, os pesos viajam uma vez e multiplicam os vetores de todos. As contas a mais quase não custam, porque o processador estava esperando a memória. Mexa no tamanho do lote.</p>
+      <div class="palco">
+        <div class="palco-vis">
+          <div class="ctrl">
+            <label class="campo"><span>Modelo</span><select id="bModelo"></select></label>
+            <div class="campo"><span>Formato dos pesos</span><div class="seg" id="bFmt" role="group" aria-label="Formato"></div></div>
+            <div class="campo largo"><span>Máquina</span><div class="seg" id="bMaq" role="group" aria-label="Máquina"></div></div>
+            <label class="campo"><span>Pedidos no lote <output id="bLOut">20</output></span><input type="range" id="bL" min="0" max="11" step="1" value="5"></label>
+            <label class="campo"><span>Tokens no cache de cada pedido <output id="bCOut">1.000</output></span><input type="range" id="bC" min="0" max="8000" step="100" value="1000"></label>
+          </div>
+          <div>
+            <span class="rotulo">Tokens por segundo, somando todos os pedidos</span>
+            <div class="colunas" id="bCol"></div>
+          </div>
+          <div class="raia"><div><b>Um de cada vez</b><small id="bUmLbl"></small></div><div class="pista"><i id="bUmBar" style="background:var(--c2)"></i><span id="bUmT"></span></div></div>
+          <div class="raia"><div><b style="color:var(--lote)">Todos juntos</b><small>mesmos tokens</small></div><div class="pista"><i id="bJuBar" style="background:var(--lote)"></i><span id="bJuT"></span></div></div>
+          <div class="metricas">
+            <div><small>Um passo</small><b id="bmPasso">—</b></div>
+            <div><small>Tok/s no total</small><b id="bmTot">—</b></div>
+            <div><small>Tok/s de cada pedido</small><b id="bmCada">—</b></div>
+            <div><small>Custo por token vs lote de 1</small><b id="bmCusto">—</b></div>
+          </div>
+        </div>
+        <div class="palco-txt" id="bTxt"></div>
+      </div>
+    </section>
+
+    <!-- ===================== 02 ===================== -->
+    <section class="cap" id="memoria" style="--c:var(--c4)" data-revelar>
+      <div class="cap-head"><span class="cap-num">02</span><h2 class="display">KV cache: a memória de cada pedido</h2></div>
+      <p class="texto">Os pesos são de todos; o KV cache é de cada um: <code>2 × camadas × cabeças KV × dimensão × bytes</code> por token. A memória que sobra depois dos pesos é o que decide <b>quantos pedidos cabem no lote</b>. Compare reservar o contexto máximo para cada pedido com guardar só o que foi usado, em blocos.</p>
+      <div class="palco">
+        <div class="palco-vis">
+          <div class="ctrl">
+            <label class="campo"><span>Modelo (FP16)</span><select id="mModelo"></select></label>
+            <div class="campo"><span>Como guardar</span><div class="seg" id="mModo" role="group" aria-label="Modo"></div></div>
+            <div class="campo largo"><span>Memória</span><div class="seg" id="mMem" role="group" aria-label="Memória"></div></div>
+            <label class="campo"><span>Contexto máximo por pedido <output id="mCOut"></output></span><input type="range" id="mC" min="1024" max="32768" step="1024" value="4096"></label>
+            <label class="campo"><span>Tokens que um pedido usa de verdade <output id="mUOut"></output></span><input type="range" id="mU" min="100" max="8000" step="100" value="1000"></label>
+          </div>
+          <div class="membar" id="mBar"></div>
+          <div><span class="rotulo">Pedidos que cabem ao mesmo tempo</span><div class="pedidos" id="mPed"></div></div>
+          <div class="metricas">
+            <div><small>KV por token</small><b id="mmTok">—</b></div>
+            <div><small>Ocupado por pedido</small><b id="mmPed">—</b></div>
+            <div><small>Pedidos que cabem</small><b id="mmN">—</b></div>
+            <div><small>Memória com token de verdade</small><b id="mmUso">—</b></div>
+          </div>
+        </div>
+        <div class="palco-txt" id="mTxt"></div>
+      </div>
+    </section>
+
+    <!-- ===================== 03 ===================== -->
+    <section class="cap" id="paged" style="--c:var(--c4)" data-revelar>
+      <div class="cap-head"><span class="cap-num">03</span><h2 class="display">PagedAttention: o cache em blocos</h2></div>
+      <p class="texto">O truque da memória virtual: o KV cache de cada pedido é cortado em <b>blocos de tamanho fixo</b> (aqui, 4 tokens; no vLLM, 16). Cada pedido tem uma <b>tabela de blocos</b> que diz onde cada pedaço está. Os blocos não precisam ser vizinhos, e só o último de cada pedido tem sobra.</p>
+      <div class="palco">
+        <div class="palco-vis">
+          <span class="rotulo">Memória da GPU · 32 blocos de 4 tokens · a barrinha branca mostra quanto do bloco está cheio</span>
+          <div class="fisico" id="pFis"></div>
+          <div class="botoes">
+            <button class="btn primario" id="pNovo">Chega um pedido</button>
+            <button class="btn" id="pGera">Gerar 1 token para todos</button>
+            <button class="btn" id="pFim">Termina o mais antigo</button>
+            <button class="btn" id="pReset">Recomeçar</button>
+          </div>
+          <div class="tabelas" id="pTab"></div>
+          <div class="metricas">
+            <div><small>Pedidos</small><b id="pmN">—</b></div>
+            <div><small>Blocos usados</small><b id="pmU">—</b></div>
+            <div><small>Blocos livres</small><b id="pmL">—</b></div>
+            <div><small>Sobra dentro dos blocos</small><b id="pmD">—</b></div>
+          </div>
+        </div>
+        <div class="palco-txt" id="pTxt"></div>
+      </div>
+    </section>
+
+    <!-- ===================== 04 ===================== -->
+    <section class="cap" id="agenda" style="--c:var(--c2)" data-revelar>
+      <div class="cap-head"><span class="cap-num">04</span><h2 class="display">Batching estático × contínuo</h2></div>
+      <p class="texto">Respostas têm tamanhos diferentes. No <b>batching estático</b>, o lote só sai quando o pedido mais longo termina, e as vagas de quem já acabou ficam paradas. No <b>batching contínuo</b>, o escalonador remonta o lote a cada passo: quem terminou sai, quem esperava entra.</p>
+      <div class="palco">
+        <div class="palco-vis">
+          <div class="ctrl">
+            <div class="campo"><span>Modo</span><div class="seg" id="aModo" role="group" aria-label="Modo"></div></div>
+            <label class="campo"><span>Vagas no lote <output id="aVOut">4</output></span><input type="range" id="aV" min="2" max="6" step="1" value="4"></label>
+          </div>
+          <div><span class="rotulo">Fila: tokens de cada resposta</span><div class="fila" id="aFila" style="margin-top:8px"></div></div>
+          <div class="agenda" id="aGrade" aria-label="Grade de passos"></div>
+          <div class="botoes"><button class="btn primario" id="aSort">Sortear outros pedidos</button><span class="nota">Cada coluna é um passo de decode. Borda vermelha: vaga presa por um pedido que já terminou.</span></div>
+          <div class="metricas">
+            <div><small>Passos</small><b id="amP">—</b></div>
+            <div><small>Vagas úteis</small><b id="amO">—</b></div>
+            <div><small>Passos até a resposta (média)</small><b id="amT">—</b></div>
+            <div><small>No outro modo</small><b id="amX">—</b></div>
+          </div>
+        </div>
+        <div class="palco-txt" id="aTxt"></div>
+      </div>
+    </section>
+
+    <!-- ===================== 05 ===================== -->
+    <section class="cap" id="chunked" style="--c:var(--warn)" data-revelar>
+      <div class="cap-head"><span class="cap-num">05</span><h2 class="display">Chunked prefill: prompt longo em pedaços</h2></div>
+      <p class="texto">20 pedidos estão escrevendo quando chega um prompt enorme. Sem cortar, o prefill dele vira <b>um passo gigante</b> e todo mundo congela. Com <b>chunked prefill</b>, o prompt é dividido: cada passo leva os decodes e um pedaço do prompt, até um orçamento de tokens. Llama-3.1-8B FP16 numa RTX 4090.</p>
+      <div class="palco">
+        <div class="palco-vis">
+          <div class="ctrl">
+            <div class="campo"><span>Chunked prefill</span><div class="seg" id="cModo" role="group" aria-label="Chunked"></div></div>
+            <label class="campo"><span>Orçamento de tokens por passo <output id="cOOut">512</output></span><input type="range" id="cO" min="128" max="4096" step="128" value="512"></label>
+            <label class="campo largo"><span>Tamanho do prompt que chega <output id="cPOut">8.000</output></span><input type="range" id="cP" min="500" max="32000" step="500" value="8000"></label>
+          </div>
+          <div><span class="rotulo">Passos no tempo (largura = duração) · cinza: só decode · amarelo: com prefill</span><div class="passos" id="cPassos" style="margin-top:8px"></div></div>
+          <div class="metricas">
+            <div><small>Passo normal</small><b id="cmN">—</b></div>
+            <div><small>Maior passo (todos esperam)</small><b id="cmM">—</b></div>
+            <div><small>Prefill do prompt longo</small><b id="cmT">—</b></div>
+            <div><small>Passos com prefill</small><b id="cmQ">—</b></div>
+          </div>
+        </div>
+        <div class="palco-txt" id="cTxt"></div>
+      </div>
+    </section>
+
+    <!-- ===================== 06 ===================== -->
+    <section class="cap" id="prefixo" style="--c:var(--c3)" data-revelar>
+      <div class="cap-head"><span class="cap-num">06</span><h2 class="display">Prefix caching: começo igual, cache igual</h2></div>
+      <p class="texto">O K e o V de um token só dependem dele e dos tokens anteriores. Se vários pedidos começam com o mesmo prompt de sistema, o cache desse começo é idêntico: <b>calcula uma vez e todos apontam para os mesmos blocos</b>. Só blocos cheios (16 tokens) são compartilhados.</p>
+      <div class="palco">
+        <div class="palco-vis">
+          <div class="ctrl">
+            <label class="campo"><span>Prompt de sistema (igual para todos) <output id="xSOut"></output></span><input type="range" id="xS" min="0" max="8000" step="100" value="2000"></label>
+            <label class="campo"><span>Tokens próprios de cada pedido <output id="xUOut"></output></span><input type="range" id="xU" min="10" max="2000" step="10" value="100"></label>
+            <label class="campo largo"><span>Pedidos <output id="xNOut"></output></span><input type="range" id="xN" min="1" max="64" step="1" value="20"></label>
+          </div>
+          <div id="xReq"></div>
+          <div class="metricas">
+            <div><small>Prefill sem cache</small><b id="xmS">—</b></div>
+            <div><small>Prefill com cache</small><b id="xmC">—</b></div>
+            <div><small>KV sem → com (Llama-8B)</small><b id="xmK">—</b></div>
+            <div><small>Economia</small><b id="xmE">—</b></div>
+          </div>
+        </div>
+        <div class="palco-txt">
+          <h3>Fixo no começo, variável no fim</h3>
+          <p>O servidor dá a cada bloco cheio uma impressão digital (hash) dos seus tokens <b>e de tudo o que veio antes</b>. Pedido novo: procura os hashes dos primeiros blocos e reaproveita os que já existem.</p>
+          <p>Por isso, basta <b>um token diferente no início</b> (a data, o nome do usuário) para nenhum bloco depois dele bater.</p>
+          <p>Ganha duas vezes: menos contas no prefill (o 1º token sai antes) e menos memória de KV (cabem mais pedidos no lote).</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== 07 ===================== -->
+    <section class="cap" id="resposta" data-revelar>
+      <div class="cap-head"><span class="cap-num">07</span><h2 class="display">A resposta</h2></div>
+      <div class="ordem">
+        <div class="card" style="--c:var(--c1)"><small>Os pesos viajam uma vez por passo</small><h3>O lote divide a viagem</h3><p>No decode, o caro é trazer os pesos da memória. Com 20 pedidos no passo, os pesos são lidos uma vez para 20 tokens. As contas extras usam um processador que estava ocioso.</p></div>
+        <div class="card" style="--c:var(--c4)"><small>O que cresce é o KV cache</small><h3>A memória limita o lote</h3><p>Cada pedido tem o seu cache. PagedAttention tira o desperdício da reserva, prefix caching compartilha o começo igual: cabem mais pedidos.</p></div>
+        <div class="card" style="--c:var(--c2)"><small>A agenda mantém o lote cheio</small><h3>Ninguém espera à toa</h3><p>Batching contínuo troca pedidos a cada passo. Chunked prefill corta prompts longos para ninguém congelar.</p></div>
+      </div>
+      <div class="resposta" id="resp"></div>
+      <div class="material">
+        <a class="card" href="../../apresentacoes/semana-07_2026-10-30/keyword_beatriz_infraestrutura-de-inferencia-2-kv-cache-e-batching/kv-cache-e-batching.pdf"><small>Slides</small><b>KV cache e batching</b><span>26 slides, com roteiro de fala.</span></a>
+        <a class="card" href="../../apresentacoes/semana-07_2026-10-30/keyword_beatriz_infraestrutura-de-inferencia-2-kv-cache-e-batching/batching.py"><small>Código</small><b>batching.py</b><span>Mede lotes de 1 a 32 na sua máquina, calcula o KV cache e testa um servidor de verdade.</span></a>
+        <a class="card" href="../geracao/geracao-de-texto.html#kv"><small>Laboratório</small><b>Semana 6: KV cache de um pedido</b><span>Prefill, decode e o cache por dentro.</span></a>
+      </div>
+    </section>
+    <p class="rodape">Os tempos são estimativas de ordem de grandeza (roofline: o maior entre tempo de conta e tempo de memória), com as mesmas máquinas do laboratório da semana 6. O KV cache é contado em FP16. As contas estão em <code>laboratorios/batching/batching.js</code>, testadas em <code>tests/batching.test.js</code>.</p>
+  </main>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+const G = window.Geracao, B = window.Batching;
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const nf = (v, d = 0) => v.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
+const bytes = b => b >= 1e9 ? nf(b / 1e9, b >= 1e10 ? 0 : 1) + " GB" : b >= 1e6 ? nf(b / 1e6, b >= 1e8 ? 0 : 1) + " MB" : nf(b / 1e3, 0) + " KB";
+const tempo = s => s >= 60 ? nf(s / 60, 1) + " min" : s >= 1 ? nf(s, s >= 10 ? 0 : 1) + " s" : nf(s * 1000, s >= 0.01 ? 0 : 1) + " ms";
+const bin = b => b >= 2 ** 30 ? nf(b / 2 ** 30, 1) + " GiB" : b >= 2 ** 20 ? nf(b / 2 ** 20, 0) + " MiB" : nf(b / 1024, 0) + " KB";
+const tps = v => nf(v, v < 100 ? 1 : 0) + " tok/s";
+const segBotoes = (el, itens, atual, fn) => {
+  el.innerHTML = itens.map(([v, t]) => `<button data-v="${esc(v)}" aria-pressed="${v === atual}">${esc(t)}</button>`).join("");
+  el.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; el.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); fn(b.dataset.v); });
+};
+const COR_PED = ["var(--c1)", "#0E7490", "var(--c4)", "var(--c2)", "var(--c3)", "#B45309", "#BE185D", "#475569", "#2563EB", "#9333EA", "#059669", "#DC2626"];
+const corPed = i => COR_PED[i % COR_PED.length];
+
+/* ---------- 01 · lote ---------- */
+const LOTES = [1, 2, 4, 8, 16, 20, 32, 64, 128, 256, 512, 1024];
+const L = { modelo: "llama8b", formato: "F16", maquina: "rtx4090", lote: 20, contexto: 1000 };
+const opcModelos = el => { el.innerHTML = G.MODELOS.map(m => `<option value="${m.id}">${esc(m.nome)}</option>`).join(""); };
+opcModelos($("bModelo")); $("bModelo").value = L.modelo;
+$("bModelo").addEventListener("input", e => { L.modelo = e.target.value; calcLote(); });
+segBotoes($("bFmt"), G.FORMATOS.map(f => [f.id, f.nome]), L.formato, v => { L.formato = v; calcLote(); });
+segBotoes($("bMaq"), G.MAQUINAS.map(q => [q.id, q.nome]), L.maquina, v => { L.maquina = v; calcLote(); });
+$("bL").addEventListener("input", e => { L.lote = LOTES[+e.target.value]; calcLote(); });
+$("bC").addEventListener("input", e => { L.contexto = +e.target.value; calcLote(); });
+function calcLote() {
+  const cv = B.curva(L, LOTES.slice(0, 10)), p = B.passo(L), p1 = B.passo({ ...L, lote: 1 });
+  const v = B.vinteVezesUm(L, L.lote, 1);
+  $("bLOut").textContent = nf(L.lote); $("bCOut").textContent = nf(L.contexto);
+  const mx = Math.max(...cv.map(r => r.tokPorSegTotal), p.tokPorSegTotal);
+  $("bCol").innerHTML = cv.map(r => `<div class="${r.lote === L.lote ? "atual" : ""}"><b>${nf(r.tokPorSegTotal)}</b><i style="height:${Math.max(2, 100 * r.tokPorSegTotal / mx)}%"></i><small>${r.lote}</small></div>`).join("");
+  $("bUmLbl").textContent = `${nf(L.lote)} × 1 pedido`;
+  $("bUmBar").style.width = "100%"; $("bJuBar").style.width = Math.max(1, 100 * v.juntos / v.umDeCada) + "%";
+  $("bUmT").textContent = tempo(v.umDeCada); $("bJuT").textContent = tempo(v.juntos);
+  $("bmPasso").textContent = tempo(p.segundos);
+  $("bmTot").textContent = tps(p.tokPorSegTotal); $("bmCada").textContent = tps(p.tokPorSegPorPedido);
+  $("bmCusto").textContent = nf(100 * (p.segundos / L.lote) / p1.segundos, 1) + "%";
+  const virada = B.loteDeVirada({ ...L, contexto: 0 });
+  $("bTxt").innerHTML = `<span class="rotulo" style="color:var(--lote)">limitado por ${p.limite}</span>
+    <h3>${nf(L.lote)} pedido${L.lote > 1 ? "s" : ""}: ${nf(v.economia, 1)}× mais barato</h3>
+    <p>Para dar um token a cada um dos ${nf(L.lote)} pedidos: um de cada vez leva <b>${tempo(v.umDeCada)}</b>, todos juntos <b>${tempo(v.juntos)}</b>. Cada pedido vê ${tps(p.tokPorSegPorPedido)} em vez de ${tps(p1.tokPorSegPorPedido)}: é o preço do lote em latência.</p>
+    <p>Neste passo, os pesos são <b>${nf(100 * p.fracPesos)}%</b> dos bytes lidos; o resto é o KV cache dos pedidos, que cresce com o lote. ${p.fracPesos < 0.5 ? "<b>O KV já pesa mais que os pesos</b>: aumentar o lote ajuda cada vez menos." : ""}</p>
+    <p>Sem KV, as contas só passariam a limitar com <b>${isFinite(virada) ? nf(virada) : "mais de 4.096"}</b> pedidos por passo nesta máquina (o ponto de virada do roofline).</p>`;
+  renderResposta();
+}
+
+/* ---------- 02 · memória ---------- */
+const MM = { modelo: "llama8b", formato: "F16", memoria: "rtx4090", contexto: 4096, medio: 1000, modo: "contigua", bloco: 16 };
+opcModelos($("mModelo")); $("mModelo").value = MM.modelo;
+$("mModelo").addEventListener("input", e => { MM.modelo = e.target.value; calcMem(); });
+segBotoes($("mModo"), [["contigua", "Reserva contígua"], ["paginada", "Em blocos (PagedAttention)"]], MM.modo, v => { MM.modo = v; calcMem(); });
+segBotoes($("mMem"), B.MEMORIAS.map(m => [m.id, m.nome]), MM.memoria, v => { MM.memoria = v; calcMem(); });
+$("mC").addEventListener("input", e => { MM.contexto = +e.target.value; calcMem(); });
+$("mU").addEventListener("input", e => { MM.medio = +e.target.value; calcMem(); });
+function calcMem() {
+  const r = B.cabem(MM), outro = B.cabem({ ...MM, modo: MM.modo === "contigua" ? "paginada" : "contigua" });
+  const mem = B.memoria(MM.memoria), usado = Math.min(MM.medio, MM.contexto);
+  $("mCOut").textContent = nf(MM.contexto) + " tokens"; $("mUOut").textContent = nf(usado) + " tokens";
+  const tot = mem.gb * 1e9, pP = Math.min(1, r.pesos / tot);
+  const kvOcup = r.pedidos * r.porPedido, kvUtil = r.pedidos * usado * r.porToken;
+  const w = x => (100 * x / tot).toFixed(2) + "%";
+  $("mBar").innerHTML = r.cabeModelo
+    ? `<i style="width:${w(r.pesos)};background:var(--c1)">pesos ${bytes(r.pesos)}</i><i style="width:${w(kvUtil)};background:var(--kv)">KV com tokens</i><i style="width:${w(kvOcup - kvUtil)};background:color-mix(in srgb,var(--kv) 30%,var(--surface));color:var(--fg)">vazio</i><i style="width:${w(tot - r.pesos - kvOcup)};background:transparent;color:var(--faint)">resto</i>`
+    : `<i style="width:100%;background:var(--bad)">o modelo (${bytes(r.pesos)}) não cabe em ${mem.gb} GB</i>`;
+  const n = r.cabeModelo ? r.pedidos : 0, mostra = Math.min(n, 200);
+  $("mPed").innerHTML = Array.from({ length: mostra }, () => "<span></span>").join("") + `<em>${n > mostra ? `+${nf(n - mostra)} · ` : ""}${nf(n)} pedido${n === 1 ? "" : "s"}</em>`;
+  $("mmTok").textContent = bin(r.porToken); $("mmPed").textContent = bin(r.porPedido);
+  $("mmN").textContent = nf(n); $("mmUso").textContent = nf(100 * r.aproveitamento) + "%";
+  $("mTxt").innerHTML = `<span class="rotulo" style="color:var(--kv)">${MM.modo === "contigua" ? "reserva contígua" : "em blocos de 16"}</span>
+    <h3>${nf(n)} pedidos cabem</h3>
+    <p>${mem.nome}, ${nf(mem.util * 100)}% para o servidor: ${bytes(r.total)}. Os pesos levam ${bytes(r.pesos)}; sobram <b>${bytes(r.livre)}</b> para o KV cache de todos.</p>
+    <p>${MM.modo === "contigua" ? `Cada pedido reserva os ${nf(MM.contexto)} tokens do contexto máximo, mas usa ${nf(usado)}: <b>${nf(100 * r.aproveitamento)}% da reserva tem token</b>.` : `Cada pedido ocupa só os blocos que preencheu: ${nf(Math.ceil(usado / 16))} blocos para ${nf(usado)} tokens. A sobra é só no último bloco.`}</p>
+    <p>No outro modo, caberiam <b>${nf(outro.cabeModelo ? outro.pedidos : 0)}</b>. O artigo do vLLM mediu que os servidores da época usavam só 20% a 38% da memória de KV com tokens de verdade.</p>`;
+}
+
+/* ---------- 03 · PagedAttention ---------- */
+const NB = 32, BT = 4;
+let P, pSeq = 0, pMsg;
+const pCor = {};
+function pReset() {
+  P = B.novoPaginador(NB, BT); pSeq = 0;
+  for (const k in pCor) delete pCor[k];
+  pMsg = ["Memória vazia", "Clique em <b>Chega um pedido</b>. O prompt dele vira K e V, guardados em blocos de 4 tokens."];
+  renderPag();
+}
+function pNovo() {
+  const id = String.fromCharCode(65 + (pSeq % 26)); pCor[id] = corPed(pSeq); pSeq++;
+  const t = 3 + ((pSeq * 5) % 8);
+  if (B.acrescentar(P, id, t)) pMsg = [`Pedido ${id}: ${t} tokens de prompt`, `Ganhou ${Math.ceil(t / BT)} bloco${t > BT ? "s" : ""}, onde houvesse espaço. Veja a tabela de blocos: o pedido enxerga uma sequência; os blocos físicos estão espalhados.`];
+  else { delete P.pedidos[id]; P.ordem = P.ordem.filter(x => x !== id); pMsg = ["Sem memória", `Não há blocos livres para o pedido ${id}. Ele espera na fila, ou o escalonador pausa alguém (preempção).`]; }
+  renderPag();
+}
+function pGera() {
+  let falta = [];
+  for (const id of [...P.ordem]) if (!B.acrescentar(P, id, 1)) falta.push(id);
+  pMsg = falta.length ? ["Memória cheia", `${falta.join(", ")} não conseguiu bloco novo. Num servidor, o escalonador pausaria um pedido e liberaria os blocos dele.`]
+    : ["Um passo de decode", "Cada pedido ganhou 1 token. Só quem encheu o último bloco precisou de um bloco novo: o resto escreveu no espaço que já tinha."];
+  renderPag();
+}
+function pFim() {
+  const id = P.ordem[0];
+  if (!id) return;
+  const nb = P.pedidos[id].tabela.length;
+  B.liberar(P, id);
+  pMsg = [`Pedido ${id} terminou`, `Os ${nb} blocos dele voltaram para a lista de livres na hora, e servem a qualquer pedido novo. Sem buracos que só cabem um pedido do mesmo tamanho.`];
+  renderPag();
+}
+function renderPag() {
+  const html = [];
+  for (let b = 0; b < NB; b++) {
+    const d = P.dono[b];
+    if (d === null) { html.push(`<div>${b}</div>`); continue; }
+    const r = P.pedidos[d], pos = r.tabela.indexOf(b);
+    const cheio = Math.min(BT, r.tokens - pos * BT);
+    html.push(`<div class="ocup" style="background:${pCor[d]}" title="pedido ${d}, bloco lógico ${pos}">${d}${pos}<i style="width:${100 * cheio / BT}%"></i></div>`);
+  }
+  $("pFis").innerHTML = html.join("");
+  $("pTab").innerHTML = P.ordem.map(id => `<div><b style="color:${pCor[id]}">${id} · ${P.pedidos[id].tokens} tokens</b>${P.pedidos[id].tabela.map((f, i) => `${i} → ${f}`).join("<br>")}</div>`).join("") || `<p class="nota">As tabelas de blocos aparecem aqui.</p>`;
+  const r = B.resumoPaginador(P);
+  $("pmN").textContent = nf(P.ordem.length); $("pmU").textContent = nf(r.blocosUsados); $("pmL").textContent = nf(r.blocosLivres);
+  $("pmD").textContent = nf(100 * r.desperdicio) + "%";
+  $("pTxt").innerHTML = `<span class="rotulo" style="color:var(--kv)">PagedAttention</span><h3>${pMsg[0]}</h3><p>${pMsg[1]}</p>
+    <p>Com reserva contígua de 32 tokens por pedido (8 blocos), só caberiam <b>4 pedidos</b> nesta memória, cheios ou não.</p>`;
+  $("pGera").disabled = !P.ordem.length; $("pFim").disabled = !P.ordem.length;
+}
+$("pNovo").addEventListener("click", pNovo); $("pGera").addEventListener("click", pGera);
+$("pFim").addEventListener("click", pFim); $("pReset").addEventListener("click", pReset);
+
+/* ---------- 04 · agenda ---------- */
+const A = { modo: "continuo", vagas: 4, seed: 7 };
+segBotoes($("aModo"), [["estatico", "Estático"], ["continuo", "Contínuo"]], A.modo, v => { A.modo = v; calcAgenda(); });
+$("aV").addEventListener("input", e => { A.vagas = +e.target.value; calcAgenda(); });
+$("aSort").addEventListener("click", () => { A.seed++; calcAgenda(); });
+function calcAgenda() {
+  const ped = B.pedidosExemplo(10, A.seed, 2, 14);
+  const idx = {}; ped.forEach((p, i) => idx[p.id] = i);
+  const ag = B.agenda(ped, A.vagas, A.modo), out = B.agenda(ped, A.vagas, A.modo === "continuo" ? "estatico" : "continuo");
+  $("aVOut").textContent = A.vagas;
+  $("aFila").innerHTML = ped.map(p => `<span style="background:${corPed(idx[p.id])}">${p.id}=${p.tokens}</span>`).join("");
+  let h = "";
+  for (let v = 0; v < A.vagas; v++) {
+    h += `<div class="lin"><small>vaga ${v + 1}</small>`;
+    for (let s = 0; s < ag.grade.length; s++) {
+      const c = ag.grade[s][v];
+      h += c === null ? `<span class="c vazio"></span>` : c === "ocioso" ? `<span class="c ocioso"></span>` : `<span class="c" style="background:${corPed(idx[c])}">${c}</span>`;
+    }
+    h += "</div>";
+  }
+  $("aGrade").innerHTML = h;
+  $("amP").textContent = nf(ag.passos); $("amO").textContent = nf(100 * ag.ocupacao) + "%";
+  $("amT").textContent = nf(ag.terminoMedio, 1);
+  $("amX").textContent = `${nf(out.passos)} passos · ${nf(100 * out.ocupacao)}%`;
+  const cont = A.modo === "continuo";
+  $("aTxt").innerHTML = `<span class="rotulo" style="color:var(--cont)">${cont ? "batching contínuo" : "batching estático"}</span>
+    <h3>${cont ? "O lote é remontado a cada passo" : "O lote espera o mais longo"}</h3>
+    <p>${cont ? "Quando um pedido gera o token de fim, a vaga dele recebe o próximo da fila <b>já no passo seguinte</b>. O artigo Orca (OSDI 2022) chamou isso de escalonamento por iteração." : "Os pedidos curtos terminam cedo, mas as vagas deles ficam presas (borda vermelha) até o mais longo do grupo acabar. Quem está na fila espera o grupo inteiro."}</p>
+    <p>Antes de cada passo, o escalonador: <b>1)</b> tira quem terminou e devolve os blocos; <b>2)</b> admite da fila se há blocos e vaga; <b>3)</b> se faltar memória, pausa alguém; <b>4)</b> roda o passo.</p>`;
+}
+
+/* ---------- 05 · chunked ---------- */
+const CH = { modelo: "llama8b", formato: "F16", maquina: "rtx4090", ativos: 20, contexto: 1000, prompt: 8000, orcamento: 512, chunked: true, passos: 14 };
+segBotoes($("cModo"), [["nao", "Desligado"], ["sim", "Ligado"]], "sim", v => { CH.chunked = v === "sim"; calcChunk(); });
+$("cO").addEventListener("input", e => { CH.orcamento = +e.target.value; calcChunk(); });
+$("cP").addEventListener("input", e => { CH.prompt = +e.target.value; calcChunk(); });
+function calcChunk() {
+  const r = B.chunked(CH), sem = B.chunked({ ...CH, chunked: false }), com = B.chunked({ ...CH, chunked: true });
+  $("cOOut").textContent = nf(CH.orcamento); $("cPOut").textContent = nf(CH.prompt);
+  const total = Math.max(...[sem, com].map(x => x.passos.reduce((a, p) => a + p.segundos, 0)));
+  $("cPassos").innerHTML = r.passos.map(p => `<i class="${p.prefill ? "pref" : ""}" style="width:calc(${(100 * p.segundos / total).toFixed(3)}% - 2px)" title="${tempo(p.segundos)}${p.prefill ? ` · ${nf(p.prefill)} tokens do prompt` : ""}"></i>`).join("");
+  const nPref = r.passos.filter(p => p.prefill).length;
+  $("cmN").textContent = tempo(r.passoNormal); $("cmM").textContent = tempo(r.maiorPasso);
+  $("cmT").textContent = tempo(r.ttft); $("cmQ").textContent = nf(nPref);
+  $("cTxt").innerHTML = `<span class="rotulo" style="color:var(--chunk)">chunked prefill ${CH.chunked ? "ligado" : "desligado"}</span>
+    <h3>${CH.chunked ? `Ninguém espera mais que ${tempo(r.maiorPasso)}` : `Todos congelam por ${tempo(r.maiorPasso)}`}</h3>
+    <p>${CH.chunked ? `O prompt de ${nf(CH.prompt)} tokens foi cortado em ${nf(nPref)} pedaços. Cada passo leva os 20 decodes e até ${nf(Math.max(1, CH.orcamento - CH.ativos))} tokens do prompt.` : `O prompt de ${nf(CH.prompt)} tokens passa num passo só. Os 20 pedidos que estavam escrevendo, a ${tempo(r.passoNormal)} por token, ficam parados.`}</p>
+    <p>Preço: o prefill do prompt longo leva ${tempo(com.ttft)} com chunked e ${tempo(sem.ttft)} sem (${nf(100 * (com.ttft / sem.ttft - 1), 0)}% a mais). Bônus: o prefill usa as contas e o decode usa a banda, então no mesmo passo um completa o outro.</p>`;
+}
+
+/* ---------- 06 · prefixo ---------- */
+const X = { modelo: "llama8b", prefixo: 2000, proprio: 100, pedidos: 20 };
+for (const [id, k] of [["xS", "prefixo"], ["xU", "proprio"], ["xN", "pedidos"]]) $(id).addEventListener("input", e => { X[k] = +e.target.value; calcPref(); });
+function calcPref() {
+  const r = B.prefixo(X);
+  $("xSOut").textContent = nf(X.prefixo) + " tokens"; $("xUOut").textContent = nf(X.proprio) + " tokens"; $("xNOut").textContent = nf(X.pedidos);
+  const tot = X.prefixo + X.proprio || 1, mostra = Math.min(X.pedidos, 6);
+  let h = "";
+  for (let i = 0; i < mostra; i++) {
+    const pc = 100 * r.compartilhados / tot, resto = 100 * (X.prefixo - r.compartilhados) / tot, pp = 100 * X.proprio / tot;
+    h += `<div class="req"><small>pedido ${i + 1}</small>${r.compartilhados ? `<i class="${i ? "rep" : "comp"}" style="width:calc(${pc.toFixed(2)}% * .8)" title="${i ? "aponta para os blocos do pedido 1" : "calculado uma vez"}"></i>` : ""}${resto > 0 ? `<i class="prop" style="width:calc(${resto.toFixed(2)}% * .8)"></i>` : ""}<i class="prop" style="width:calc(${pp.toFixed(2)}% * .8)"></i></div>`;
+  }
+  if (X.pedidos > mostra) h += `<p class="nota">… e mais ${nf(X.pedidos - mostra)} pedidos iguais.</p>`;
+  h += `<p class="nota">Verde cheio: blocos do prompt de sistema, calculados uma vez. Verde vazado: os outros pedidos só apontam para eles. Azul: tokens calculados por cada pedido.</p>`;
+  $("xReq").innerHTML = h;
+  $("xmS").textContent = nf(r.prefillSem); $("xmC").textContent = nf(r.prefillCom);
+  $("xmK").textContent = `${bytes(r.kvSem)} → ${bytes(r.kvCom)}`;
+  $("xmE").textContent = nf(r.economiaPrefill, 1) + "×";
+}
+
+/* ---------- 07 · resposta ---------- */
+function renderResposta() {
+  const v = B.vinteVezesUm(L, 20, 1), m = G.modelo(L.modelo), q = G.maquina(L.maquina);
+  $("resp").innerHTML = `<b>No decode, o caro é a viagem dos pesos, e o lote divide essa viagem entre todos.</b> Com ${esc(m.nome)} em ${esc(q.nome)} (parte 01), dar um token a cada um de 20 pedidos leva ${tempo(v.umDeCada)} um de cada vez e ${tempo(v.juntos)} todos juntos: <b>${nf(v.economia, 1)}× mais barato</b>. O que cresce com o lote é o KV cache de cada pedido, e por isso os servidores cuidam tanto da memória (PagedAttention, prefix caching) e da agenda (batching contínuo, chunked prefill). O preço: cada pedido fica um pouco mais lento.`;
+}
+
+calcLote(); calcMem(); pReset(); calcAgenda(); calcChunk(); calcPref();
+
+/* ---------- índice lateral ---------- */
+(function () {
+  const links = [...document.querySelectorAll("#indice a")];
+  const caps = links.map(a => document.querySelector(a.getAttribute("href")));
+  if (!("IntersectionObserver" in window)) return;
+  const io = new IntersectionObserver(ents => {
+    ents.forEach(en => { if (en.isIntersecting) links.forEach((a, i) => a.classList.toggle("ativo", caps[i] === en.target)); });
+  }, { rootMargin: "-45% 0px -50% 0px" });
+  caps.forEach(c => c && io.observe(c));
+})();
+
+document.documentElement.dataset.pronto = "1";
+
+/* ?autoteste: clica em tudo, como uma pessoa faria (usado por tests/test_paginas.py) */
+if (/[?&]autoteste/.test(location.search)) (async () => {
+  const espera = ms => new Promise(r => setTimeout(r, ms));
+  const muda = (id, v) => { $(id).value = v; $(id).dispatchEvent(new Event("input")); };
+  for (const b of $("bMaq").querySelectorAll("button")) for (const f of $("bFmt").querySelectorAll("button")) {
+    b.click(); f.click();
+    for (const m of G.MODELOS) muda("bModelo", m.id);
+  }
+  for (let i = 0; i <= 11; i++) muda("bL", i);
+  muda("bC", 8000); muda("bC", 0);
+  for (const md of $("mModo").querySelectorAll("button")) for (const me of $("mMem").querySelectorAll("button")) {
+    md.click(); me.click();
+    for (const m of G.MODELOS) muda("mModelo", m.id);
+  }
+  muda("mC", 32768); muda("mU", 8000); muda("mU", 100);
+  for (let i = 0; i < 12; i++) $("pNovo").click();
+  for (let i = 0; i < 10; i++) $("pGera").click();
+  for (let i = 0; i < 3; i++) $("pFim").click();
+  $("pNovo").click();
+  const usados = [...$("pFis").children].filter(d => d.classList.contains("ocup")).length;
+  if (usados !== B.resumoPaginador(P).blocosUsados) throw new Error("grade de blocos não bate com o alocador");
+  $("pReset").click();
+  for (const md of $("aModo").querySelectorAll("button")) for (let v = 2; v <= 6; v++) { md.click(); muda("aV", v); $("aSort").click(); }
+  for (const md of $("cModo").querySelectorAll("button")) { md.click(); muda("cO", 128); muda("cP", 32000); muda("cO", 4096); muda("cP", 500); }
+  muda("xS", 0); muda("xS", 8000); muda("xU", 2000); muda("xN", 64); muda("xN", 1);
+  await espera(20);
+  document.documentElement.dataset.autoteste = "ok";
+})().catch(e => { document.documentElement.dataset.erro = "autoteste: " + e.message; });
+});
+</script>
+</body>
+</html>

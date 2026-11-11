@@ -5,7 +5,7 @@
 | **Tema** | Memória e banda: o roofline, por que decode é lento | Infraestrutura de inferência 2/2 — KV cache e batching |
 | **Quem** | João Vitor | Beatriz |
 | **Pasta** | `principal_joao_memoria-banda-e-roofline/` | `keyword_beatriz_infraestrutura-de-inferencia-2-kv-cache-e-batching/` |
-| **Material** | — | — |
+| **Material** | — | [Slides (PDF)](keyword_beatriz_infraestrutura-de-inferencia-2-kv-cache-e-batching/kv-cache-e-batching.pdf) · [Código: batching.py](keyword_beatriz_infraestrutura-de-inferencia-2-kv-cache-e-batching/batching.py) |
 
 ## Perguntas a fechar
 
@@ -13,6 +13,10 @@ O último slide de cada apresentação é a resposta.
 
 - **Principal:** Quantos bytes o nosso hardware lê para gerar um token? Por que é isso, e não os FLOPs, que define o tok/s?
 - **Keyword:** Por que servir 20 pedidos ao mesmo tempo custa muito menos que 20× servir um?
+
+## Laboratórios
+
+- [Laboratório: KV cache e batching](../../laboratorios/batching/kv-cache-e-batching.html)
 
 ## Como subir o material
 
