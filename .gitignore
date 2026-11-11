@@ -14,8 +14,8 @@ models/
 checkpoints/
 hf_cache/
 .cache/
+*.pptx
 
-# Segredos
 .env
 .env.*
 !.env.example
